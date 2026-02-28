@@ -4,7 +4,7 @@
 #include <string>
 #include <sstream>
 
-std::vector<std::string> parsing::parse_command(const std::string& line)
+std::vector<std::string> CommandParsing::parse_command(const std::string& line)
 {
     std::vector<std::string> args;
     std::string arg;                         

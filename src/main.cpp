@@ -1,17 +1,27 @@
 #include "Parsing.hpp"
+#include "Executing.hpp"
 #include <iostream>
 #include <string>
 
 int main()
 {
     Command command;
-    std::string line = "this is a line command";
-    command.arg = parsing::parse_command(line);
+    std::string line;
 
-    for(auto& i : command.arg)
+    while(1)
     {
-        std::cout << i << std::endl;
+        std::cout << "$ ";
+        std::getline(std::cin, line);
+        command.arg = CommandParsing::parse_command(line);
+        if(CommandExecuting::is_builtin(command))
+        {
+            if(CommandExecuting::execute_builtin(command) == ExecResult::EXIT)
+            {
+                break;
+            }
+        }
     }
+
     return 0;
 }
 

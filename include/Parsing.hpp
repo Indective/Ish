@@ -3,7 +3,7 @@
 #include <string>
 #include <iostream>
 
-namespace parsing
+namespace CommandParsing
 {
     std::vector<std::string> parse_command(const std::string& line);
 }

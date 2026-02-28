@@ -21,4 +21,3 @@
 **Execute** : The shell forks a process, executes the command, and waits for it to finish.
 
 **Print** : It displays output or errors to the terminal
-
