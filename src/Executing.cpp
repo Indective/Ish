@@ -1,6 +1,10 @@
 #include "Executing.hpp"
+#include <iostream>
 #include <unordered_map>
 #include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <vector>
 
 namespace CommandExecuting
 {
@@ -13,7 +17,35 @@ namespace CommandExecuting
         {"exit", builtin_exit}
     };
 
-    ExecResult execute_builtin(const Command& cmd)
+    ExecResult execute_external(const Command &cmd)
+    {
+        std::vector<char*> arg_c;
+        pid_t pid = fork();
+        if(pid == -1)
+        {
+            perror("Failed to fork process !\n");
+            return ExecResult::ERROR;
+        }
+        else if(pid == 0)
+        {
+            for(auto &it : cmd.arg)
+            {
+                arg_c.push_back(const_cast<char*>(it.c_str()));
+            }
+            arg_c.push_back(nullptr);
+            execvp(arg_c[0],arg_c.data());
+            return ExecResult::ERROR;
+        }
+        else
+        {
+            waitpid(pid,nullptr,0);
+            return ExecResult::OK;
+        }
+        return ExecResult::OK;
+
+    }
+
+    ExecResult execute_builtin(const Command &cmd)
     {
         if (cmd.arg.empty())
         {
@@ -35,7 +67,6 @@ namespace CommandExecuting
 
     static ExecResult builtin_cd(const Command& cmd)
     {
-        char buffer[1024];
         const char* dir_name;
         if (cmd.arg.size() != 2)
         {
@@ -45,15 +76,11 @@ namespace CommandExecuting
 
         if (chdir(dir_name) == 0)
         {
-            if(getcwd(buffer,1024) != NULL)
-            {
-                std::cout << buffer << std::endl;
-            }
             return ExecResult::OK;
         }
         else 
         {
-           std::cerr << dir_name << " : Directory not found." << std::endl; 
+           std::cerr << "cd : Directory not found : " << dir_name << std::endl; 
         }
         
         return ExecResult::ERROR;

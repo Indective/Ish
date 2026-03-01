@@ -21,3 +21,13 @@
 **Execute** : The shell forks a process, executes the command, and waits for it to finish.
 
 **Print** : It displays output or errors to the terminal
+
+
+
+to be done : 
+aliases
+background processes
+automations scripts
+maybe windows compatibility
+replace /home/[username] with ~ when displaying current working directory
+ 

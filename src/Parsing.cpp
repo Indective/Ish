@@ -4,15 +4,18 @@
 #include <string>
 #include <sstream>
 
-std::vector<std::string> CommandParsing::parse_command(const std::string& line)
+namespace CommandParsing
 {
-    std::vector<std::string> args;
-    std::string arg;                         
-    std::stringstream ss(line);            
-
-    while (ss >> arg) 
+    std::vector<std::string> parse_command(const std::string& line)
     {
-        args.push_back(arg);
+        std::vector<std::string> args;
+        std::string arg;                         
+        std::stringstream ss(line);            
+
+        while (ss >> arg) 
+        {
+            args.push_back(arg);
+        }
+        return args;
     }
-    return args;
 }
