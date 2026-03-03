@@ -26,7 +26,7 @@ namespace CommandExecuting
             perror("Failed to fork process !\n");
             return ExecResult::ERROR;
         }
-        else if(pid == 0)
+        else if(pid == 0) // code accessible only by the child process
         {
             for(auto &it : cmd.arg)
             {

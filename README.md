@@ -31,3 +31,16 @@ automations scripts
 maybe windows compatibility
 replace /home/[username] with ~ when displaying current working directory
  
+
+aliases : 
+let user save aliases at ish/.aliases
+load aliases into memory on startup
+whenever a user enters a command, check for aliases
+if found, replace the alias with the corresponding command before executing it
+move command to the execution section.
+
+alias structure : 
+
+alias {alias name} = "{command}"
+0         1         2      3
+

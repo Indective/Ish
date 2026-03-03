@@ -15,6 +15,10 @@ int main()
         std::cout << getcwd(buffer,MAX_BUFFER_LENGTH) << " $ ";
         std::getline(std::cin, line);
         command.arg = CommandParsing::parse_command(line);
+        for(auto &it : command.arg)
+        {
+            std::cout << it << std::endl;
+        }
         if(CommandExecuting::is_builtin(command))
         {
             if(CommandExecuting::execute_builtin(command) == ExecResult::EXIT)
@@ -24,7 +28,10 @@ int main()
         }
         else
         {
-            CommandExecuting::execute_external(command);
+            if(!(CommandExecuting::execute_external(command) == ExecResult::OK))
+            {
+                std::cout << "Command execution failed !" << std::endl;
+            }
         }
     }
 
