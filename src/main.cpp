@@ -1,20 +1,27 @@
 #include "Parsing.hpp"
 #include "Executing.hpp"
+#include "Environment.hpp"
 #include <iostream>
 #include <string>
 #include <unistd.h>
 
 int main()
 {
+    Environment environ;
     Command command;
     std::string line;
     const size_t MAX_BUFFER_LENGTH = 1024;
     char buffer[MAX_BUFFER_LENGTH];
+
+    environ.load_aliases();
+
     while(1)
     {
         std::cout << getcwd(buffer,MAX_BUFFER_LENGTH) << " $ ";
         std::getline(std::cin, line);
         command.arg = CommandParsing::parse_command(line);
+        environ.replace_alias(command.arg);
+
         for(auto &it : command.arg)
         {
             std::cout << it << std::endl;
