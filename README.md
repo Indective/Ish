@@ -44,3 +44,5 @@ alias structure :
 alias {alias name} = "{command}"
 0         1         2      3
 
+use camke .. and make run to compile and run
+dw i will change this README when i am atleast semi done with the project

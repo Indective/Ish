@@ -13,19 +13,15 @@ int main()
     const size_t MAX_BUFFER_LENGTH = 1024;
     char buffer[MAX_BUFFER_LENGTH];
 
-    environ.load_aliases();
+    environ.load_aliases(); // pretty self explanitory, load aliases into memory (using an unordered_map)
 
     while(1)
     {
         std::cout << getcwd(buffer,MAX_BUFFER_LENGTH) << " $ ";
         std::getline(std::cin, line);
-        command.arg = CommandParsing::parse_command(line);
-        environ.replace_alias(command.arg);
+        command.arg = CommandParsing::parse_command(line); // parse command line 
+        environ.replace_alias(command.arg); // look for aliases, if found, replace them in command.arg
 
-        for(auto &it : command.arg)
-        {
-            std::cout << it << std::endl;
-        }
         if(CommandExecuting::is_builtin(command))
         {
             if(CommandExecuting::execute_builtin(command) == ExecResult::EXIT)

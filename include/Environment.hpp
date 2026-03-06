@@ -11,6 +11,6 @@ private:
     std::vector<std::string> parse_line(const std::string& line);
 public:
     ExecResult load_aliases();
-    std::vector<std::string> replace_alias(std::vector<std::string>& tokens);
+    void replace_alias(std::vector<std::string>& tokens);
 };
 

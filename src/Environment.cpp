@@ -1,4 +1,5 @@
 #include "Environment.hpp"
+#include "Parsing.hpp"
 #include <iostream>
 #include <unordered_map>
 #include <fstream>
@@ -75,21 +76,30 @@ ExecResult Environment::load_aliases()
     return ExecResult::OK;
 }
 
-std::vector<std::string> Environment::replace_alias(std::vector<std::string>& tokens)
+void Environment::replace_alias(std::vector<std::string>& tokens)
 {
-    bool has_alias = false;
-    for(size_t i = 0; i < tokens.size(); i ++)
+    std::vector<std::string> result;
+    for (size_t i = 0; i < tokens.size(); i++)
     {
         auto it = aliases.find(tokens[i]);
-        if(it != aliases.end())
+        if (it != aliases.end())
         {
-            has_alias = true;
-            tokens[i] = it->second;
+            // expand alias value into sub-tokens and splice them in
+            std::vector<std::string> expanded = CommandParsing::parse_command(it->second);
+            for(auto &it : expanded)
+            {
+                std::cout << "Expanded : " << it << std::endl;
+            }
+            result.insert(result.end(), expanded.begin(), expanded.end());
+        }
+        else
+        {
+            result.push_back(tokens[i]);
         }
     }
-    if(!has_alias)
+    for(auto &it : result)
     {
-        return {};
+        std::cout << "result : " << it << std::endl;
     }
-    return {};
+    tokens = result;
 }

@@ -19,8 +19,8 @@ target_include_directories(${PROJECT_NAME}
         ${CMAKE_SOURCE_DIR}/include
 )
 
-target_compile_options(${PROJECT_NAME} PRIVATE
-    -Wall
-    -Wextra
-    -Wpedantic
+add_custom_target(run
+    COMMAND ${CMAKE_BINARY_DIR}/shell
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    DEPENDS shell
 )
