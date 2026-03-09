@@ -30,21 +30,6 @@ background processes
 automations scripts
 job control
 pipes
-replace /home/[username] with ~ when displaying current working directory    done,working
-press arrow keys to get last used commands. (could be done fastly)
+replace /home/[username] with ~ when displaying current working directory    done, working
+press arrow keys to get last used commands. (could be done fastly)       done, working
  
-
-aliases : 
-let user save aliases at ish/.aliases
-load aliases into memory on startup
-whenever a user enters a command, check for aliases
-if found, replace the alias with the corresponding command before executing it
-move command to the execution section.
-
-alias structure : 
-
-alias {alias name} = "{command}"
-0         1         2      3
-
-use camke .. and make run to compile and run
-dw i will change this README when i am atleast semi done with the project

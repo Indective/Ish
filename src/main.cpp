@@ -13,27 +13,27 @@ int main()
     Command command;
     std::string line;
     const size_t MAX_BUFFER_LENGTH = 1024;
-    char buffer[MAX_BUFFER_LENGTH];
-    char* temp;
-    char* input;
+    char buffer[MAX_BUFFER_LENGTH]; // save the path
+    char* temp, * input;
 
     environ.load_aliases(); // pretty self explanitory, load aliases into memory (using an unordered_map)
 
     while(1)
     {
-        temp = getcwd(buffer,MAX_BUFFER_LENGTH);
+        temp = getcwd(buffer,MAX_BUFFER_LENGTH); 
 
         std::string path(temp);
         path = environ.shorten_path(path);
         input = readline(path.c_str());
 
-        if(!input)
+        if(!input) // input hit EoF (exit cleanly when hitting Ctrl + D)
         {
             break;
         }
-        if(*input)
+
+        if(*input) // input is not a nullptr, IOW input is pointing to a character
         {
-            add_history(input);
+            add_history(input); // add input to the scrollable history (using Arrow keys)
         }
 
         command.arg = CommandParsing::parse_command(input); // parse command line 
