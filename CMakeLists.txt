@@ -18,6 +18,7 @@ target_include_directories(${PROJECT_NAME}
     PRIVATE
         ${CMAKE_SOURCE_DIR}/include
 )
+target_link_libraries(shell readline)
 
 add_custom_target(run
     COMMAND ${CMAKE_BINARY_DIR}/shell

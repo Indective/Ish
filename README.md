@@ -25,11 +25,13 @@
 
 
 to be done : 
-aliases
-background processes
+aliases       done, working
+background processes      
 automations scripts
-maybe windows compatibility
-replace /home/[username] with ~ when displaying current working directory
+job control
+pipes
+replace /home/[username] with ~ when displaying current working directory    done,working
+press arrow keys to get last used commands. (could be done fastly)
  
 
 aliases : 

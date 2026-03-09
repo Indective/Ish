@@ -1,9 +1,10 @@
 #include "Environment.hpp"
 #include "Parsing.hpp"
 #include <iostream>
+#include <stdlib.h>
+#include <string.h>
 #include <unordered_map>
 #include <fstream>
-#include <vector>
 #include <string>
 
 std::vector<std::string> Environment::parse_line(const std::string& line)
@@ -86,10 +87,7 @@ void Environment::replace_alias(std::vector<std::string>& tokens)
         {
             // expand alias value into sub-tokens and splice them in
             std::vector<std::string> expanded = CommandParsing::parse_command(it->second);
-            for(auto &it : expanded)
-            {
-                std::cout << "Expanded : " << it << std::endl;
-            }
+
             result.insert(result.end(), expanded.begin(), expanded.end());
         }
         else
@@ -97,9 +95,15 @@ void Environment::replace_alias(std::vector<std::string>& tokens)
             result.push_back(tokens[i]);
         }
     }
-    for(auto &it : result)
-    {
-        std::cout << "result : " << it << std::endl;
-    }
     tokens = result;
+}
+
+std::string Environment::shorten_path(const std::string &path)
+{
+    const char* home = getenv("HOME");
+    if (home && path.rfind(home, 0) == 0) // check if path starts with $HOME
+    {
+        return "~" + path.substr(strlen(home)) + prefix;
+    }
+    return path;
 }
