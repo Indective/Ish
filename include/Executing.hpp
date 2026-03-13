@@ -10,4 +10,5 @@ namespace CommandExecuting
     ExecResult execute_external(const Command& cmd);
     ExecResult execute_builtin(const Command& cmd);
     bool is_builtin(const Command& cmd);
+    ExecResult handle_execution(const Command& cmd);
 }

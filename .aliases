@@ -1,3 +1,5 @@
 alias ..="cd .."
 alias cls="clear"
-alias mkcd="mkdir test && cd test"
+alias mkdir="mkdir test"
+alias something="ls"
+alias someotherthing="cd .."

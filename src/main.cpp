@@ -11,14 +11,16 @@ int main()
 {
     Environment environ;
     Command command;
-    std::string line;
+    ExecResult result = ExecResult::OK;
+
     const size_t MAX_BUFFER_LENGTH = 1024;
     char buffer[MAX_BUFFER_LENGTH]; // save the path
-    char* temp, * input;
+    char* temp;
+    char* input;
 
     environ.load_aliases(); // pretty self explanitory, load aliases into memory (using an unordered_map)
 
-    while(1)
+    while(result != ExecResult::EXIT)
     {
         temp = getcwd(buffer,MAX_BUFFER_LENGTH); 
 
@@ -28,7 +30,8 @@ int main()
 
         if(!input) // input hit EoF (exit cleanly when hitting Ctrl + D)
         {
-            break;
+            std::cout << "exiting from ctrl d " << std::endl;
+            result  = ExecResult::EXIT;
         }
 
         if(*input) // input is not a nullptr, IOW input is pointing to a character
@@ -39,22 +42,9 @@ int main()
         command.arg = CommandParsing::parse_command(input); // parse command line 
         environ.replace_alias(command.arg); // look for aliases, if found, replace them in command.arg
 
-        if(CommandExecuting::is_builtin(command))
-        {
-            if(CommandExecuting::execute_builtin(command) == ExecResult::EXIT)
-            {
-                break;
-            }
-        }
-        else
-        {
-            if(!(CommandExecuting::execute_external(command) == ExecResult::OK))
-            {
-                std::cout << "Command execution failed !" << std::endl;
-            }
-        }
+        result = CommandExecuting::handle_execution(command);
 
-        free(input);
+        free(input); // (hopefully) avoid segfaults
     }
 
     return 0;

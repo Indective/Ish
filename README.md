@@ -32,4 +32,7 @@ job control
 pipes
 replace /home/[username] with ~ when displaying current working directory    done, working
 press arrow keys to get last used commands. (could be done fastly)       done, working
+reload aliases when changing .aliases
+fix issue with exit command, as right now it is needed to run this command the same number times the command execution for other commands failed throught the shell session.
+
  

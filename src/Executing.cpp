@@ -8,8 +8,8 @@
 
 namespace CommandExecuting
 {
-    static ExecResult builtin_cd(const Command& cmd);
-    static ExecResult builtin_exit(const Command& cmd);
+    ExecResult builtin_cd(const Command& cmd);
+    ExecResult builtin_exit(const Command& cmd);
 
     static std::unordered_map<std::string, BuiltinFn> builtins =
     {
@@ -20,8 +20,9 @@ namespace CommandExecuting
     ExecResult execute_external(const Command &cmd)
     {
         std::vector<char*> arg_c;
+        int status;
         pid_t pid = fork();
-        if(pid == -1)
+        if(pid == -1) // forking failed 
         {
             perror("Failed to fork process !\n");
             return ExecResult::ERROR;
@@ -34,14 +35,16 @@ namespace CommandExecuting
             }
             arg_c.push_back(nullptr);
             execvp(arg_c[0],arg_c.data());
-            return ExecResult::ERROR;
+            perror("ish");
+            _exit(EXIT_FAILURE);
+            
         }
         else
         {
-            waitpid(pid,nullptr,0);
+            waitpid(pid,&status,0);
             return ExecResult::OK;
         }
-        return ExecResult::OK;
+        return ExecResult::ERROR;
 
     }
 
@@ -63,9 +66,25 @@ namespace CommandExecuting
         return builtins.find(cmd.arg[0]) != builtins.end();
     }
 
+    ExecResult handle_execution(const Command &cmd)
+    {
+        if(CommandExecuting::is_builtin(cmd))
+        {
+            return CommandExecuting::execute_builtin(cmd);
+        }
+
+        else
+        {
+            return CommandExecuting::execute_external(cmd);
+        }
+
+        std::cout << "handle command error " << std::endl;
+    }
+
+
     //Builtin implementations
 
-    static ExecResult builtin_cd(const Command& cmd)
+    ExecResult builtin_cd(const Command& cmd)
     {
         const char* dir_name;
         if (cmd.arg.size() != 2)
@@ -86,7 +105,7 @@ namespace CommandExecuting
         return ExecResult::ERROR;
     }
 
-    static ExecResult builtin_exit(const Command&)
+    ExecResult builtin_exit(const Command&)
     {
         return ExecResult::EXIT;
     }
