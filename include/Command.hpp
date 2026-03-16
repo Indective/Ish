@@ -11,5 +11,6 @@ enum class ExecResult
 
 struct Command
 {
-    std::vector<std::string>arg;
+    std::vector<std::string> arg;
 };
+

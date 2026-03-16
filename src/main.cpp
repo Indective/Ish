@@ -1,6 +1,7 @@
 #include "Parsing.hpp"
 #include "Executing.hpp"
 #include "Environment.hpp"
+#include "JobControl.hpp"
 #include <readline/readline.h>
 #include <readline/history.h>
 #include <iostream>
@@ -17,6 +18,7 @@ int main()
     char buffer[MAX_BUFFER_LENGTH]; // save the path
     char* temp;
     char* input;
+    bool is_background = false;
 
     environ.load_aliases(); // pretty self explanitory, load aliases into memory (using an unordered_map)
 
@@ -40,9 +42,18 @@ int main()
         }
 
         command.arg = CommandParsing::parse_command(input); // parse command line 
-        environ.replace_alias(command.arg); // look for aliases, if found, replace them in command.arg
+        if(JobControl::is_background(command.arg))
+        {
+            command.arg = CommandParsing::remove_background_symbol(command.arg);
+            is_background = true;
+        }
+        else
+        {
+            is_background = false;
+        }
 
-        result = CommandExecuting::handle_execution(command);
+        environ.replace_alias(command.arg); // look for aliases, if found, replace them in command.arg
+        result = CommandExecuting::handle_execution(command, is_background);
 
         free(input); // (hopefully) avoid segfaults
     }
