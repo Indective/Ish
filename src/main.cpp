@@ -55,6 +55,7 @@ int main()
         environ.replace_alias(command.arg); // look for aliases, if found, replace them in command.arg
         result = CommandExecuting::handle_execution(command, is_background);
 
+        signal(SIGCHLD, JobControl::sigchldHandler);
         free(input); // (hopefully) avoid segfaults
     }
 
