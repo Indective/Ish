@@ -48,7 +48,6 @@ namespace CommandExecuting
 
     ExecResult execute_background(const Command &cmd)
     {
-        std::cout << "running background" << std::endl;
         pid_t pid;
         pid = fork();
         std::vector<char*> arg_c;
@@ -71,7 +70,9 @@ namespace CommandExecuting
         }
         else
         {
-            JobControl::jobs.push_back({JobControl::job_counter++,pid,cmd.arg, JobStatus::RUNNING});
+            JobControl::job_counter++;
+            JobControl::jobs.push_back({JobControl::job_counter,pid,cmd.arg, JobStatus::RUNNING});
+            std::cout << "[" << JobControl::job_counter << "] " << pid << std::endl; 
             return ExecResult::OK;
         }
     }

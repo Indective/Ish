@@ -4,6 +4,8 @@
 #include <unordered_map>
 #include <vector>
 #include <sys/wait.h>
+#include <readline/readline.h>
+#include <csignal>
 
 enum class JobStatus
 {
@@ -22,8 +24,10 @@ struct Job
 
 namespace JobControl
 {
+    extern volatile sig_atomic_t childchanged;
     extern int job_counter;
     extern std::vector<Job> jobs;
     bool is_background(const std::vector<std::string>& tokens);
     void sigchldHandler(int);
+    void print_done_message_and_reap();
 };
