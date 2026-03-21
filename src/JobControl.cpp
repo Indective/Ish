@@ -1,4 +1,6 @@
 #include "JobControl.hpp"
+#include <vector>
+#include <string>
 
 
 namespace JobControl
@@ -29,7 +31,6 @@ namespace JobControl
                 }
             }
         }
-        childchanged = 1;
     }
 
     void print_done_message_and_reap()
@@ -40,15 +41,12 @@ namespace JobControl
             if(job.status == JobStatus::DONE)
             {
                 rl_on_new_line();
-                std::cout << "[" << job.id << "]" << " done ";
+                std::cout << "[" << job.id << "]+" << "\tdone\t";
                 for(auto &it : job.command)
                 {
                     std::cout << it << " ";
                 }
                 std::cout << std::endl;
-                std::cout.flush();
-
-                rl_redisplay();
             }
         }
         std::erase_if(jobs, [](Job job) {return job.status == JobStatus::DONE;});

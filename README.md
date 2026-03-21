@@ -26,7 +26,7 @@
 
 to be done : 
 aliases       done, working
-background processes      
+background processes      near
 automations scripts
 job control
 pipes

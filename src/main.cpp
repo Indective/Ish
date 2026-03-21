@@ -56,11 +56,8 @@ int main()
         result = CommandExecuting::handle_execution(command, is_background);
 
         signal(SIGCHLD, JobControl::sigchldHandler);
-        if(JobControl::childchanged)
-        {
-            JobControl::childchanged = 0;
-            JobControl::print_done_message_and_reap();
-        }
+        JobControl::print_done_message_and_reap();
+        
         free(input); // (hopefully) avoid segfaults
     }
 
