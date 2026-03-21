@@ -14,5 +14,6 @@ public:
     ExecResult load_aliases();
     void replace_alias(std::vector<std::string>& tokens);
     std::string shorten_path(const std::string& path);
+    char * get_input(ExecResult &result, const char * path);
 };
 

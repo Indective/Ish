@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <fstream>
 #include <string>
+#include <readline/history.h>
 
 std::vector<std::string> Environment::parse_line(const std::string& line)
 {
@@ -106,4 +107,27 @@ std::string Environment::shorten_path(const std::string &path)
         return "~" + path.substr(strlen(home)) + prefix;
     }
     return path;
+}
+
+char * Environment::get_input(ExecResult &result, const char * path)
+{
+    char * input;
+    while(true)
+    {
+        input = readline(path);
+        if(!input)
+        {
+            std::cout << "exiting from ctrl d " << std::endl;
+            result  = ExecResult::EXIT;
+            free(input);
+            break;
+        }
+        else if(input[0] != '\0')
+        {
+            add_history(input);
+            return input;
+        }
+        free(input);
+    }
+    return input; // function will never reach this, just to avoid compiler warnings
 }

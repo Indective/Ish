@@ -25,21 +25,10 @@ int main()
     while(result != ExecResult::EXIT)
     {
         temp = getcwd(buffer,MAX_BUFFER_LENGTH); 
-
         std::string path(temp);
         path = environ.shorten_path(path);
-        input = readline(path.c_str());
 
-        if(!input) // input hit EoF (exit cleanly when hitting Ctrl + D)
-        {
-            std::cout << "exiting from ctrl d " << std::endl;
-            result  = ExecResult::EXIT;
-        }
-
-        if(*input) // input is not a nullptr, IOW input is pointing to a character
-        {
-            add_history(input); // add input to the scrollable history (using Arrow keys)
-        }
+        input = environ.get_input(result,path.c_str());
 
         command.arg = CommandParsing::parse_command(input); // parse command line 
         if(JobControl::is_background(command.arg))
@@ -59,6 +48,7 @@ int main()
         JobControl::print_done_message_and_reap();
         
         free(input); // (hopefully) avoid segfaults
+        
     }
 
     return 0;
