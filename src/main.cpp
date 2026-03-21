@@ -28,7 +28,11 @@ int main()
         std::string path(temp);
         path = environ.shorten_path(path);
 
-        input = environ.get_input(result,path.c_str());
+        input = environ.get_input(path.c_str());
+        if(!input)
+        {
+            break;
+        }
 
         command.arg = CommandParsing::parse_command(input); // parse command line 
         if(JobControl::is_background(command.arg))

@@ -109,7 +109,7 @@ std::string Environment::shorten_path(const std::string &path)
     return path;
 }
 
-char * Environment::get_input(ExecResult &result, const char * path)
+char * Environment::get_input(const char * path)
 {
     char * input;
     while(true)
@@ -118,8 +118,6 @@ char * Environment::get_input(ExecResult &result, const char * path)
         if(!input)
         {
             std::cout << "exiting from ctrl d " << std::endl;
-            result  = ExecResult::EXIT;
-            free(input);
             break;
         }
         else if(input[0] != '\0')
@@ -129,5 +127,7 @@ char * Environment::get_input(ExecResult &result, const char * path)
         }
         free(input);
     }
-    return input; // function will never reach this, just to avoid compiler warnings
+    free(input);
+    input = nullptr;
+    return nullptr;
 }
