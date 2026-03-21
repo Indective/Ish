@@ -21,6 +21,7 @@ int main()
     bool is_background = false;
 
     environ.load_aliases(); // pretty self explanitory, load aliases into memory (using an unordered_map)
+    signal(SIGCHLD, JobControl::sigchldHandler);
 
     while(result != ExecResult::EXIT)
     {
@@ -48,7 +49,6 @@ int main()
         environ.replace_alias(command.arg); // look for aliases, if found, replace them in command.arg
         result = CommandExecuting::handle_execution(command, is_background);
 
-        signal(SIGCHLD, JobControl::sigchldHandler);
         JobControl::print_done_message_and_reap();
         
         free(input); // (hopefully) avoid segfaults
