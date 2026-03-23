@@ -2,6 +2,7 @@
 #include "Command.hpp"
 #include "JobControl.hpp"
 #include <iostream>
+#include <vector>
 #include <unordered_map>
 
 using BuiltinFn = ExecResult(*)(const Command&);

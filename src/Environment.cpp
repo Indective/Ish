@@ -1,9 +1,7 @@
 #include "Environment.hpp"
 #include "Parsing.hpp"
-#include <iostream>
 #include <stdlib.h>
 #include <string.h>
-#include <unordered_map>
 #include <fstream>
 #include <string>
 #include <readline/history.h>

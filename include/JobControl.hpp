@@ -1,11 +1,13 @@
 #pragma once
 #include "Command.hpp"
+#include "Executing.hpp"
 #include <iostream>
-#include <unordered_map>
 #include <vector>
+#include <unordered_map>
 #include <sys/wait.h>
 #include <readline/readline.h>
 #include <csignal>
+#include <signal.h>
 
 enum class JobStatus
 {
@@ -24,9 +26,10 @@ struct Job
 
 namespace JobControl
 {
+    extern volatile sig_atomic_t child_changed;
     extern int job_counter;
     extern std::vector<Job> jobs;
     bool is_background(const std::vector<std::string>& tokens);
     void sigchldHandler(int);
-    void print_done_message_and_reap();
+    void reap_finished_jobs();
 };

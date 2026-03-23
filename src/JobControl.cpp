@@ -1,13 +1,11 @@
 #include "JobControl.hpp"
-#include <vector>
 #include <string>
-
 
 namespace JobControl
 {
     int job_counter = 0;
     std::vector<Job> jobs;
-    volatile sig_atomic_t childchanged = 0;
+    volatile sig_atomic_t child_changed = 0;
 
     bool is_background(const std::vector<std::string>& tokens)
     {
@@ -27,29 +25,32 @@ namespace JobControl
                 if (job.pid == pid) 
                 {
                     job.status = JobStatus::DONE;
+                    child_changed = 1;
                     break;
                 }
             }
         }
     }
 
-    void print_done_message_and_reap()
+    void reap_finished_jobs()
     {
-
-        for(auto &job : jobs)
+        if(child_changed)
         {
-            if(job.status == JobStatus::DONE)
+            child_changed = 0;
+            for(auto &job : jobs)
             {
-                rl_on_new_line();
-                std::cout << "[" << job.id << "]+" << "\tdone\t";
-                for(auto &it : job.command)
+                if(job.status == JobStatus::DONE)
                 {
-                    std::cout << it << " ";
+                    rl_on_new_line();
+                    std::cout << "[" << job.id << "]+" << "\tdone\t";
+                    for(auto &it : job.command)
+                    {
+                        std::cout << it << " ";
+                    }
+                    std::cout << std::endl;
                 }
-                std::cout << std::endl;
             }
+            std::erase_if(jobs, [](Job job) {return job.status == JobStatus::DONE;});
         }
-        std::erase_if(jobs, [](Job job) {return job.status == JobStatus::DONE;});
     }
-
 }

@@ -1,7 +1,5 @@
 #include "Command.hpp"
-#include <iostream>
 #include <unordered_map>
-#include <vector>
 
 class Environment
 {

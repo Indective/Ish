@@ -3,6 +3,7 @@
 #include "JobControl.hpp"
 #include <string>
 #include <iostream>
+#include <vector>
 
 namespace CommandParsing
 {

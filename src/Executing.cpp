@@ -9,11 +9,13 @@ namespace CommandExecuting
 {
     ExecResult builtin_cd(const Command& cmd);
     ExecResult builtin_exit(const Command& cmd);
+    ExecResult builtin_jobs(const Command& cmd);
 
     static std::unordered_map<std::string, BuiltinFn> builtins =
     {
         {"cd", builtin_cd},
-        {"exit", builtin_exit}
+        {"exit", builtin_exit},
+        {"jobs",builtin_jobs}
     };
 
     ExecResult execute_foreground(const Command &cmd)
@@ -156,5 +158,22 @@ namespace CommandExecuting
             }
         }
         return ExecResult::EXIT;
+    }
+    ExecResult builtin_jobs(const Command &)
+    {
+        for(auto &job : JobControl::jobs)
+        {
+            if(job.status == JobStatus::RUNNING)
+            {
+                rl_on_new_line();
+                std::cout << "[" << job.id << "]+" << "\trunning\t";
+                for(auto &it : job.command)
+                {
+                    std::cout << it << " ";
+                }
+                std::cout << std::endl;
+            }
+        }
+        return ExecResult::OK;
     }
 }
