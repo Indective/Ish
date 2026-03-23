@@ -1,5 +1,0 @@
-alias ..="cd .."
-alias cls="clear"
-alias mkdir="mkdir test"
-alias something="ls"
-alias someotherthing="cd .."
