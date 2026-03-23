@@ -18,7 +18,6 @@ int main()
     char buffer[MAX_BUFFER_LENGTH]; // save the path
     char* temp;
     char* input;
-    bool is_background = false;
 
     environ.load_aliases(); // pretty self explanitory, load aliases into memory (using an unordered_map)
     signal(SIGCHLD, JobControl::sigchldHandler);
@@ -35,19 +34,11 @@ int main()
             break;
         }
 
-        command.arg = CommandParsing::parse_command(input); // parse command line 
-        if(JobControl::is_background(command.arg))
-        {
-            command.arg = CommandParsing::remove_background_symbol(command.arg);
-            is_background = true;
-        }
-        else
-        {
-            is_background = false;
-        }
+        command.args = CommandParsing::parse_command(input);
+        command.is_background = JobControl::handle_background(command.args);
 
-        environ.replace_alias(command.arg); // look for aliases, if found, replace them in command.arg
-        result = CommandExecuting::handle_execution(command, is_background);
+        environ.replace_alias(command.args); // look for aliases, if found, replace them in command.arg
+        result = CommandExecuting::handle_execution(command, command.is_background);
 
         JobControl::reap_finished_jobs();
         free(input); // (hopefully) avoid segfaults

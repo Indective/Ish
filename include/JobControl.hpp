@@ -26,10 +26,9 @@ struct Job
 
 namespace JobControl
 {
-    extern volatile sig_atomic_t child_changed;
     extern int job_counter;
     extern std::vector<Job> jobs;
-    bool is_background(const std::vector<std::string>& tokens);
+    bool handle_background(std::vector<std::string>& tokens);
     void sigchldHandler(int);
     void reap_finished_jobs();
 };

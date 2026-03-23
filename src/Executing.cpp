@@ -29,7 +29,7 @@ namespace CommandExecuting
         }
         else if(pid == 0) // code accessible only by the child process
         {
-            for(auto &it : cmd.arg)
+            for(auto &it : cmd.args)
             {
                 arg_c.push_back(const_cast<char*>(it.c_str()));
             }
@@ -60,7 +60,7 @@ namespace CommandExecuting
         }
         else if(pid == 0) // code accessible only by the child process
         {
-            for(auto &it : cmd.arg)
+            for(auto &it : cmd.args)
             {
                 arg_c.push_back(const_cast<char*>(it.c_str()));
             }
@@ -73,7 +73,7 @@ namespace CommandExecuting
         else
         {
             JobControl::job_counter++;
-            JobControl::jobs.push_back({JobControl::job_counter,pid,cmd.arg, JobStatus::RUNNING});
+            JobControl::jobs.push_back({JobControl::job_counter,pid,cmd.args, JobStatus::RUNNING});
             std::cout << "[" << JobControl::job_counter << "] " << pid << std::endl; 
             return ExecResult::OK;
         }
@@ -93,20 +93,20 @@ namespace CommandExecuting
 
     ExecResult execute_builtin(const Command &cmd)
     {
-        if (cmd.arg.empty())
+        if (cmd.args.empty())
         {
             return ExecResult::ERROR;
         }
-        auto it = builtins.find(cmd.arg[0]);
+        auto it = builtins.find(cmd.args[0]);
         return it->second(cmd);
     }
 
     bool is_builtin(const Command& cmd)
     {
-        if (cmd.arg.empty())
+        if (cmd.args.empty())
             return false;
 
-        return builtins.find(cmd.arg[0]) != builtins.end();
+        return builtins.find(cmd.args[0]) != builtins.end();
     }
 
     ExecResult handle_execution(const Command &cmd,const bool &is_background)
@@ -129,11 +129,11 @@ namespace CommandExecuting
     ExecResult builtin_cd(const Command& cmd)
     {
         const char* dir_name;
-        if (cmd.arg.size() != 2)
+        if (cmd.args.size() != 2)
         {
             return ExecResult::ERROR;
         }
-        dir_name = cmd.arg[1].c_str();
+        dir_name = cmd.args[1].c_str();
 
         if (chdir(dir_name) == 0)
         {

@@ -1,15 +1,20 @@
 #include "JobControl.hpp"
 #include <string>
+#include <vector>
 
 namespace JobControl
 {
     int job_counter = 0;
     std::vector<Job> jobs;
-    volatile sig_atomic_t child_changed = 0;
 
-    bool is_background(const std::vector<std::string>& tokens)
+    bool handle_background(std::vector<std::string>& tokens)
     {
-        return tokens.back() == "&";
+        if(tokens.back() == "&")
+        {
+            tokens.pop_back();
+            return true;
+        }
+        return false;
     }
 
     void sigchldHandler(int)
@@ -25,7 +30,6 @@ namespace JobControl
                 if (job.pid == pid) 
                 {
                     job.status = JobStatus::DONE;
-                    child_changed = 1;
                     break;
                 }
             }
@@ -34,23 +38,19 @@ namespace JobControl
 
     void reap_finished_jobs()
     {
-        if(child_changed)
+        for(auto &job : jobs)
         {
-            child_changed = 0;
-            for(auto &job : jobs)
+            if(job.status == JobStatus::DONE)
             {
-                if(job.status == JobStatus::DONE)
+                rl_on_new_line();
+                std::cout << "[" << job.id << "]+" << "\tdone\t";
+                for(auto &it : job.command)
                 {
-                    rl_on_new_line();
-                    std::cout << "[" << job.id << "]+" << "\tdone\t";
-                    for(auto &it : job.command)
-                    {
-                        std::cout << it << " ";
-                    }
-                    std::cout << std::endl;
+                    std::cout << it << " ";
                 }
+                std::cout << std::endl;
             }
-            std::erase_if(jobs, [](Job job) {return job.status == JobStatus::DONE;});
         }
+        std::erase_if(jobs, [](Job job) {return job.status == JobStatus::DONE;});
     }
 }
