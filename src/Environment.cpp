@@ -59,14 +59,17 @@ ExecResult Environment::load_aliases()
     {
         while (std::getline(inputFile, line)) 
         {
-            invalid_line ++;
-            tokens = parse_line(line);
-            if(tokens.empty())
+            if(!line.empty())
             {
-                std::cerr << "Invalid alias ignored; Invalid command syntax at line : " << invalid_line << std::endl;
-                continue;
+                invalid_line ++;
+                tokens = parse_line(line);
+                if(tokens.empty())
+                {
+                    std::cerr << "Invalid alias ignored; Invalid command syntax at line : " << invalid_line << std::endl;
+                    continue;
+                }
+                aliases[tokens[0]] = tokens[1];
             }
-            aliases[tokens[0]] = tokens[1];
         }
         inputFile.close();
     } 
@@ -117,7 +120,6 @@ char * Environment::get_input(const char * path)
         input = readline(path);
         if(!input)
         {
-            std::cout << "exiting from ctrl d " << std::endl;
             break;
         }
         else if(input[0] != '\0')
