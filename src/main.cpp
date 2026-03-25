@@ -16,7 +16,7 @@ int main()
 
     const size_t MAX_BUFFER_LENGTH = 1024;
     char buffer[MAX_BUFFER_LENGTH]; // save the path
-    char* temp;
+    char* full_path;
     char* input;
 
     environ.load_aliases(); // pretty self explanitory, load aliases into memory (using an unordered_map)
@@ -24,11 +24,10 @@ int main()
 
     while(result != ExecResult::EXIT)
     {
-        temp = getcwd(buffer,MAX_BUFFER_LENGTH); 
-        std::string path(temp);
-        path = environ.shorten_path(path);
+        full_path = getcwd(buffer,MAX_BUFFER_LENGTH); 
+        std::string shortend_path = environ.shorten_path(full_path); // an obv shit line of code because i cannot find a proper way of converting a std::string to a char * which forces me to use another variable
 
-        input = environ.get_input(path.c_str());
+        input = environ.get_input(shortend_path.c_str());
         if(!input)
         {
             break;
