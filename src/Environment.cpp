@@ -105,9 +105,16 @@ std::string Environment::shorten_path(const std::string &path)
     const char* home = getenv("HOME");
     if (home && path.rfind(home, 0) == 0) // check if path starts with $HOME
     {
-        return "~" + path.substr(strlen(home)) + prefix;
+        return "~" + path.substr(strlen(home));
     }
     return path;
+}
+
+std::string Environment::build_prompt(const std::string &path)
+{
+    std::string short_path = shorten_path(path);
+    std::string prompt = ANSI_COLOR_BLUE + short_path + ANSI_COLOR_RESET + postfix;
+    return prompt; 
 }
 
 char * Environment::get_input(const char * path)
@@ -129,5 +136,5 @@ char * Environment::get_input(const char * path)
     }
     free(input);
     input = nullptr;
-    return nullptr;
+    return input;
 }

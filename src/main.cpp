@@ -25,10 +25,10 @@ int main()
     while(result != ExecResult::EXIT)
     {
         full_path = getcwd(buffer,MAX_BUFFER_LENGTH); 
-        std::string shortend_path = environ.shorten_path(full_path); // an obv shit line of code because i cannot find a proper way of converting a std::string to a char * which forces me to use another variable
 
-        input = environ.get_input(shortend_path.c_str());
-        if(!input)
+        input = environ.get_input(environ.build_prompt(full_path).c_str());
+
+        if(!input) // avoid dangling pointers that the program tries to parse later on (causing core dumps)
         {
             break;
         }
