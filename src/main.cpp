@@ -36,6 +36,10 @@ int main()
         command.args = CommandParsing::parse_command(input);
         command.is_background = JobControl::handle_background(command.args);
 
+        for(auto &it : command.args)
+        {
+            std::cout << it << std::endl;
+        }
         environ.replace_alias(command.args); // look for aliases, if found, replace them in command.arg
         result = CommandExecuting::handle_execution(command, command.is_background);
 

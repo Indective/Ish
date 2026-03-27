@@ -7,15 +7,33 @@ namespace CommandParsing
 {
     std::vector<std::string> parse_command(const std::string& line)
     {
-        std::vector<std::string> args;
-        std::string arg;                         
-        std::stringstream ss(line);            
+        std::vector<std::string> tokens;
+        std::string token;
+        bool in_qoute = false;
 
-        while (ss >> arg) 
+        for (char c : line) 
         {
-            args.push_back(arg);
+            if(c == '"')
+            {
+                in_qoute = !in_qoute;
+            }
+            else if(c == ' ' && !in_qoute)
+            {
+                if(!token.empty())
+                {
+                    tokens.push_back(token);
+                    token.clear();
+                }
+            }
+            else
+            {
+                token += c;
+            }
         }
-
-        return args;
+        if(!token.empty())
+        {
+            tokens.push_back(token);
+        }
+        return tokens;
     }
 }

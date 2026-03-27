@@ -20,7 +20,7 @@ namespace CommandExecuting
 
     ExecResult execute_foreground(const Command &cmd)
     {
-        std::vector<char*> arg_c;
+        std::vector<char*> argv;
         pid_t pid = fork();
         if(pid == -1) // forking failed 
         {
@@ -29,12 +29,12 @@ namespace CommandExecuting
         }
         else if(pid == 0) // code accessible only by the child process
         {
-            for(auto &it : cmd.args)
+            for(auto &arg : cmd.args)
             {
-                arg_c.push_back(const_cast<char*>(it.c_str()));
+                argv.push_back(const_cast<char*>(arg.c_str()));
             }
-            arg_c.push_back(nullptr);
-            execvp(arg_c[0],arg_c.data());
+            argv.push_back(nullptr);
+            execvp(argv[0],argv.data());
             perror("ish");
             _exit(EXIT_FAILURE);
             
@@ -52,7 +52,7 @@ namespace CommandExecuting
     {
         pid_t pid;
         pid = fork();
-        std::vector<char*> arg_c;
+        std::vector<char*> argv;
         if(pid == -1) // forking failed 
         {
             perror("Failed to fork process !\n");
@@ -60,12 +60,12 @@ namespace CommandExecuting
         }
         else if(pid == 0) // code accessible only by the child process
         {
-            for(auto &it : cmd.args)
+            for(auto &arg : cmd.args)
             {
-                arg_c.push_back(const_cast<char*>(it.c_str()));
+                argv.push_back(const_cast<char*>(arg.c_str()));
             }
-            arg_c.push_back(nullptr);
-            execvp(arg_c[0],arg_c.data());
+            argv.push_back(nullptr);
+            execvp(argv[0],argv.data());
             perror("ish");
             _exit(EXIT_FAILURE);
             
