@@ -4,6 +4,11 @@ standard UNIX-based shell, includes all basic functionality of a shell
 
 - **PROJECT STILL IN DEVELOPMENT**
 
+## Feature Plans
+
+- Redirection
+- pipes
+
 ## Requirements
 
 - **CMake** : minimum version required : 3.16
