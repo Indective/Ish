@@ -79,25 +79,25 @@ ExecResult Environment::load_aliases()
     return ExecResult::OK;
 }
 
-void Environment::replace_alias(std::vector<std::string>& tokens)
+void Environment::replace_alias(Command &cmd)
 {
     std::vector<std::string> result;
-    for (size_t i = 0; i < tokens.size(); i++)
+    for (size_t i = 0; i < cmd.args.size(); i++)
     {
-        auto it = aliases.find(tokens[i]);
+        auto it = aliases.find(cmd.args[i]);
         if (it != aliases.end())
         {
             // expand alias value into sub-tokens and splice them in
-            std::vector<std::string> expanded = CommandParsing::parse_command(it->second);
+            std::vector<std::string> expanded = CommandParsing::parse_command(it->second, cmd);
 
             result.insert(result.end(), expanded.begin(), expanded.end());
         }
         else
         {
-            result.push_back(tokens[i]);
+            result.push_back(cmd.args[i]);
         }
     }
-    tokens = result;
+    cmd.args = result;
 }
 
 std::string Environment::shorten_path(const std::string &path)

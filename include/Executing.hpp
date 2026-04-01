@@ -5,14 +5,15 @@
 #include <vector>
 #include <unordered_map>
 
-using BuiltinFn = ExecResult(*)(const Command&);
+using BuiltinFn = ExecResult(*)(const std::vector<std::string>& tokens);
+using RedirectionFn = std::pair<int, int>(*)(const std::string&);
 
 namespace CommandExecuting
 {
-    ExecResult handle_external(const Command& cmd, const bool &is_background);
-    ExecResult execute_builtin(const Command& cmd);
-    bool is_builtin(const Command& cmd);
-    ExecResult handle_execution(const Command& cmd, const bool &is_background);
+    ExecResult execute_builtin(const Command & cmd);
+    bool is_builtin(const std::vector<std::string>& tokens);
+    ExecResult handle_execution(const Command& cmd);
     ExecResult execute_foreground(const Command& cmd);
     ExecResult execute_background(const Command& cmd);
+    void Restore_file_descriptors();
 }

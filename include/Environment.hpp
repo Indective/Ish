@@ -18,7 +18,7 @@ private:
 
 public:
     ExecResult load_aliases();
-    void replace_alias(std::vector<std::string>& tokens);
+    void replace_alias(Command &cmd);
     std::string build_prompt(const std::string &path);
     char * get_input(const char * path);
 };

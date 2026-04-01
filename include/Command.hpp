@@ -13,5 +13,6 @@ struct Command
 {
     std::vector<std::string> args;
     bool is_background = false;
+    std::vector<std::pair<std::string, std::string>> redirect;
 };
 

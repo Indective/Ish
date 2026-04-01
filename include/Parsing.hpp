@@ -7,5 +7,6 @@
 
 namespace CommandParsing
 {
-    std::vector<std::string> parse_command(const std::string& line);
+    std::vector<std::string> parse_command(const std::string& line, Command& cmd);
+    void handle_redirection(std::vector<std::string>& tokens, Command & cmd);
 }

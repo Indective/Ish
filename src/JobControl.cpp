@@ -7,6 +7,7 @@ namespace JobControl
     int job_counter = 0;
     std::vector<Job> jobs;
 
+    // move this into parsing section
     bool handle_background(std::vector<std::string>& tokens)
     {
         if(tokens.back() == "&")
