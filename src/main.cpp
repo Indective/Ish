@@ -11,7 +11,6 @@
 int main()
 {
     Environment environ;
-    Command command;
     ExecResult result = ExecResult::OK;
 
     const size_t MAX_BUFFER_LENGTH = 1024;
@@ -24,6 +23,7 @@ int main()
 
     while(result != ExecResult::EXIT)
     {
+        Command command;
         full_path = getcwd(buffer,MAX_BUFFER_LENGTH); 
 
         input = environ.get_input(environ.build_prompt(full_path).c_str());
