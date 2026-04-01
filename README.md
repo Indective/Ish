@@ -20,21 +20,21 @@ standard UNIX-based shell, includes all basic functionality of a shell
 
 - **Clone the repo**
 
-\```bash
+```bash
 git clone <https://github.com/Indective/ish.git>
 cd ish
-\```
+```
 
 - **Configure and build**
 
-\```bash
+```bash
 cmake -B build
 cmake --build build
-\```
+```
 
 - **Run**
 
-\```bash
+```bash
 cd build
 make run
-\```
+```
