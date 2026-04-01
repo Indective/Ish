@@ -1,3 +1,0 @@
-mytestdir
-test
-text.txt
