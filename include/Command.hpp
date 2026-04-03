@@ -11,7 +11,7 @@ enum class ExecResult
 
 struct Command
 {
-    std::vector<std::string> args;
+    std::vector<std::string> tokens;
     bool is_background = false;
     std::vector<std::pair<std::string, std::string>> redirect;
 };

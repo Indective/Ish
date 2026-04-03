@@ -50,13 +50,12 @@ namespace CommandExecuting
         }
         else if(pid == 0) // code accessible only by the child process
         {
-            for(auto &arg : cmd.args)
+            for(auto &arg : cmd.tokens)
             {
                 argv.push_back(const_cast<char*>(arg.c_str()));
             }
             argv.push_back(nullptr);
 
-            std::cout << "cmd.redirect size: " << cmd.redirect.size() << std::endl;
             for(auto &[op, fn] : cmd.redirect)
             {
                 redirected_descriptors.push_back(redircetion_handler[op](fn));
@@ -70,7 +69,6 @@ namespace CommandExecuting
         else
         {
             waitpid(pid,nullptr,0);
-            Restore_file_descriptors();
             return ExecResult::OK;
         }
         return ExecResult::ERROR;
@@ -89,7 +87,7 @@ namespace CommandExecuting
         }
         else if(pid == 0) // code accessible only by the child process
         {
-            for(auto &arg : cmd.args)
+            for(auto &arg : cmd.tokens)
             {
                 argv.push_back(const_cast<char*>(arg.c_str()));
             }
@@ -108,10 +106,8 @@ namespace CommandExecuting
         else
         {
             JobControl::job_counter++;
-            JobControl::jobs.push_back({JobControl::job_counter,pid,cmd.args, JobStatus::RUNNING});
+            JobControl::jobs.push_back({JobControl::job_counter,pid,cmd.tokens, JobStatus::RUNNING});
             std::cout << "[" << JobControl::job_counter << "] " << pid << std::endl; 
-            // restore file descriptors 
-            
             return ExecResult::OK;
         }
     }
@@ -122,7 +118,6 @@ namespace CommandExecuting
         {
             for(auto &it : redirected_descriptors)
             {
-                std::cout << it.first << " " << it.second << std::endl;
                 dup2(it.first, it.second);
                 close(it.first);
             }
@@ -133,10 +128,10 @@ namespace CommandExecuting
     {
         for(auto &[op, fn] : cmd.redirect)
         {
-            redircetion_handler[op](fn);
+            redirected_descriptors.push_back(redircetion_handler[op](fn));
         }
-        auto it = builtins.find(cmd.args[0]);
-        return it->second(cmd.args);
+        auto it = builtins.find(cmd.tokens[0]);
+        return it->second(cmd.tokens);
     }
 
     bool is_builtin(const std::vector<std::string>& tokens)
@@ -146,7 +141,7 @@ namespace CommandExecuting
 
     ExecResult handle_execution(const Command &cmd)
     {
-        if(CommandExecuting::is_builtin(cmd.args))
+        if(CommandExecuting::is_builtin(cmd.tokens))
         {
             return CommandExecuting::execute_builtin(cmd);
         }
@@ -201,6 +196,7 @@ namespace CommandExecuting
         }
         return ExecResult::EXIT;
     }
+
     ExecResult builtin_jobs(const std::vector<std::string>& tokens)
     {
         for(auto &job : JobControl::jobs)
@@ -216,6 +212,7 @@ namespace CommandExecuting
                 std::cout << std::endl;
             }
         }
+
         return ExecResult::OK;
     }
 
@@ -227,12 +224,12 @@ namespace CommandExecuting
         int fd = open(filename.c_str(), O_WRONLY | O_CREAT | O_TRUNC , 0664);
         if(fd == -1)
         {
-            perror("open :");
+            perror("open ");
             _exit(EXIT_FAILURE);
         }
         if(dup2(fd,STDOUT_FILENO) == -1)
         {
-            perror("dup2 : ");
+            perror("dup2 ");
             _exit(EXIT_FAILURE);
         }
         return {saved_out,STDOUT_FILENO};
@@ -240,37 +237,53 @@ namespace CommandExecuting
 
     std::pair<int, int> Redirect_stdout_append(const std::string &filename)
     {
+        int saved_out = dup(STDOUT_FILENO);
         int fd = open(filename.c_str(), O_APPEND | O_CREAT | O_WRONLY , 0664);
         if(fd == -1)
         {
-            perror("open :");
+            perror("open ");
             _exit(EXIT_FAILURE);
         }
         if(dup2(fd,STDOUT_FILENO) == -1)
         {
-            perror("dup2 :");
+            perror("dup2 ");
             _exit(EXIT_FAILURE);    
         }
+        return {saved_out, STDOUT_FILENO};
     }
 
     std::pair<int, int> Redirect_stderr(const std::string &filename)
     {
-        int fd = open(filename.c_str(), O_WRONLY | O_CREAT | O_TRUNC , 0664);
+        int saved_out = dup(STDERR_FILENO);
+        int fd = open(filename.c_str(), O_WRONLY | O_CREAT, 0664);
         if(fd == -1)
         {
-            perror("open :");
+            perror("open ");
             _exit(EXIT_FAILURE);
         }
         if(dup2(fd,STDERR_FILENO) == -1)
         {
-            perror("dup2 :");
+            perror("dup2 ");
             _exit(EXIT_FAILURE); 
         }
+        return {saved_out, STDERR_FILENO};
     }
 
     std::pair<int, int> Redirect_stdin(const std::string &filename)
     {
-        return {};
+        int saved_out = dup(STDIN_FILENO);
+        int fd = open(filename.c_str(), O_RDONLY | O_CREAT, 0664);
+        if(fd == -1)
+        {
+            perror("open ");
+            _exit(EXIT_FAILURE);
+        }
+        if(dup2(fd,STDIN_FILENO) == -1)
+        {
+            perror("dup2 ");
+            _exit(EXIT_FAILURE); 
+        }
+        return {saved_out, STDIN_FILENO};
     }
 
     std::pair<int, int> Redirect_stdin_heredoc(const std::string &filename)
@@ -280,7 +293,19 @@ namespace CommandExecuting
     
     std::pair<int, int> Redirect_stdin_herestr(const std::string &filename)
     {
-        return {};
+        int saved_out = dup(STDIN_FILENO);
+        int fd = open(filename.c_str(), O_RDONLY | O_CREAT, 0664);
+        if(fd == -1)
+        {
+            perror("open ");
+            _exit(EXIT_FAILURE);
+        }
+        if(dup2(fd,STDIN_FILENO) == -1)
+        {
+            perror("dup2 ");
+            _exit(EXIT_FAILURE); 
+        }
+        return {saved_out, STDIN_FILENO};
     }
 
 }

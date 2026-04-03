@@ -82,9 +82,9 @@ ExecResult Environment::load_aliases()
 void Environment::replace_alias(Command &cmd)
 {
     std::vector<std::string> result;
-    for (size_t i = 0; i < cmd.args.size(); i++)
+    for (size_t i = 0; i < cmd.tokens.size(); i++)
     {
-        auto it = aliases.find(cmd.args[i]);
+        auto it = aliases.find(cmd.tokens[i]);
         if (it != aliases.end())
         {
             // expand alias value into sub-tokens and splice them in
@@ -94,10 +94,10 @@ void Environment::replace_alias(Command &cmd)
         }
         else
         {
-            result.push_back(cmd.args[i]);
+            result.push_back(cmd.tokens[i]);
         }
     }
-    cmd.args = result;
+    cmd.tokens = result;
 }
 
 std::string Environment::shorten_path(const std::string &path)

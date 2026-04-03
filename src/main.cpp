@@ -33,13 +33,14 @@ int main()
             break;
         }
 
-        command.args = CommandParsing::parse_command(input, command);
-        command.is_background = JobControl::handle_background(command.args);
+        command.tokens = CommandParsing::parse_command(input, command);
+        command.is_background = JobControl::handle_background(command.tokens);
         
         environ.replace_alias(command); // look for aliases, if found, replace them in command.arg
         result = CommandExecuting::handle_execution(command);
 
         JobControl::reap_finished_jobs();
+        CommandExecuting::Restore_file_descriptors();
         free(input); // (hopefully) avoid segfaults
     }
 
