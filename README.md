@@ -28,8 +28,7 @@ cd ish
 - **Configure and build**
 
 ```bash
-cmake -B build
-cmake --build build
+cmake ..
 ```
 
 - **Run**
