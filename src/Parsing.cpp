@@ -30,7 +30,7 @@ namespace CommandParsing
                 token += c;
             }
         }
-        if(!token.empty() && tokens.size() == 0) // single command with no whitespaces entered
+        if(!token.empty())
         {
             tokens.push_back(token);
         }
