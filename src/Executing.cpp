@@ -24,8 +24,8 @@ namespace CommandExecuting
     std::pair<int, int> Redirect_stdout_append(const std::string& filename);
     std::pair<int, int> Redirect_stderr(const std::string& filename);
     std::pair<int, int> Redirect_stdin(const std::string& filename);
-    std::pair<int, int> Redirect_stdin_heredoc(const std::string& filename);
-    std::pair<int, int> Redirect_stdin_herestr(const std::string& filename);
+    std::pair<int, int> Redirect_stdin_heredoc(const std::string& content);
+    std::pair<int, int> Redirect_stdin_herestr(const std::string& content);
 
     static std::unordered_map<std::string,RedirectionFn> redircetion_handler = 
     {
@@ -220,7 +220,7 @@ namespace CommandExecuting
 
     std::pair<int, int> Redirect_stdout_overwrite(const std::string &filename)
     {
-        int saved_out = dup(STDOUT_FILENO);
+        int saved_fd = dup(STDOUT_FILENO);
         int fd = open(filename.c_str(), O_WRONLY | O_CREAT | O_TRUNC , 0664);
         if(fd == -1)
         {
@@ -232,12 +232,12 @@ namespace CommandExecuting
             perror("dup2 ");
             _exit(EXIT_FAILURE);
         }
-        return {saved_out,STDOUT_FILENO};
+        return {saved_fd,STDOUT_FILENO};
     }
 
     std::pair<int, int> Redirect_stdout_append(const std::string &filename)
     {
-        int saved_out = dup(STDOUT_FILENO);
+        int saved_fd = dup(STDOUT_FILENO);
         int fd = open(filename.c_str(), O_APPEND | O_CREAT | O_WRONLY , 0664);
         if(fd == -1)
         {
@@ -249,12 +249,12 @@ namespace CommandExecuting
             perror("dup2 ");
             _exit(EXIT_FAILURE);    
         }
-        return {saved_out, STDOUT_FILENO};
+        return {saved_fd, STDOUT_FILENO};
     }
 
     std::pair<int, int> Redirect_stderr(const std::string &filename)
     {
-        int saved_out = dup(STDERR_FILENO);
+        int saved_fd = dup(STDERR_FILENO);
         int fd = open(filename.c_str(), O_WRONLY | O_CREAT, 0664);
         if(fd == -1)
         {
@@ -266,12 +266,12 @@ namespace CommandExecuting
             perror("dup2 ");
             _exit(EXIT_FAILURE); 
         }
-        return {saved_out, STDERR_FILENO};
+        return {saved_fd, STDERR_FILENO};
     }
 
     std::pair<int, int> Redirect_stdin(const std::string &filename)
     {
-        int saved_out = dup(STDIN_FILENO);
+        int saved_fd = dup(STDIN_FILENO);
         int fd = open(filename.c_str(), O_RDONLY | O_CREAT, 0664);
         if(fd == -1)
         {
@@ -283,29 +283,25 @@ namespace CommandExecuting
             perror("dup2 ");
             _exit(EXIT_FAILURE); 
         }
-        return {saved_out, STDIN_FILENO};
+        return {saved_fd, STDIN_FILENO};
     }
 
-    std::pair<int, int> Redirect_stdin_heredoc(const std::string &filename)
+    std::pair<int, int> Redirect_stdin_heredoc(const std::string &content)
     {
         return {};
     }
     
-    std::pair<int, int> Redirect_stdin_herestr(const std::string &filename)
+    std::pair<int, int> Redirect_stdin_herestr(const std::string &content)
     {
-        int saved_out = dup(STDIN_FILENO);
-        int fd = open(filename.c_str(), O_RDONLY | O_CREAT, 0664);
-        if(fd == -1)
-        {
-            perror("open ");
-            _exit(EXIT_FAILURE);
-        }
-        if(dup2(fd,STDIN_FILENO) == -1)
-        {
-            perror("dup2 ");
-            _exit(EXIT_FAILURE); 
-        }
-        return {saved_out, STDIN_FILENO};
+        int saved_fd = dup(STDIN_FILENO);
+        int pipefd[2];
+        pipe(pipefd);
+        write(pipefd[1],content.c_str(),content.size());
+        write(pipefd[1], "\n", 1);
+        close(pipefd[1]);
+        dup2(pipefd[0],STDIN_FILENO);
+        close(pipefd[0]);
+        return {saved_fd, STDIN_FILENO};
     }
 
 }
