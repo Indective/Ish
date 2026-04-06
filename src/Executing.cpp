@@ -24,7 +24,7 @@ namespace CommandExecuting
     std::pair<int, int> Redirect_stdout_append(const std::string& filename);
     std::pair<int, int> Redirect_stderr(const std::string& filename);
     std::pair<int, int> Redirect_stdin(const std::string& filename);
-    std::pair<int, int> Redirect_stdin_heredoc(const std::string& content);
+    std::pair<int, int> Redirect_stdin_heredoc(const std::string& delimiter);
     std::pair<int, int> Redirect_stdin_herestr(const std::string& content);
 
     static std::unordered_map<std::string,RedirectionFn> redircetion_handler = 
@@ -286,9 +286,30 @@ namespace CommandExecuting
         return {saved_fd, STDIN_FILENO};
     }
 
-    std::pair<int, int> Redirect_stdin_heredoc(const std::string &content)
+    std::pair<int, int> Redirect_stdin_heredoc(const std::string &delimiter)
     {
-        return {};
+        int saved_fd = dup(STDIN_FILENO);
+        int pipefd[2];
+
+        std::vector<std::string> content;
+        std::string line;
+        std::cout << ". ";
+        while (std::getline(std::cin, line) && line != delimiter) 
+        {
+            content.push_back(line);
+            std::cout << ". ";
+        }
+        pipe(pipefd);
+        for(auto &line : content)
+        {
+            write(pipefd[1],line.c_str(),line.size());
+            write(pipefd[1], "\n", 1);
+        }
+        close(pipefd[1]);
+        dup2(pipefd[0],STDIN_FILENO);
+        close(pipefd[0]);
+        return {saved_fd, STDIN_FILENO};
+        
     }
     
     std::pair<int, int> Redirect_stdin_herestr(const std::string &content)
