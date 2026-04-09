@@ -12,7 +12,7 @@ enum class ExecResult
 struct Command
 {
     std::vector<std::string> tokens;
-    bool is_background = false;
+    bool is_pipe = false;
     std::vector<std::pair<std::string, std::string>> redirect;
 };
 

@@ -45,17 +45,23 @@ namespace CommandParsing
 
     void handle_redirection(std::vector<std::string>& tokens, Command & cmd)
     {
-        std::vector<std::string> ops = {"<","<<","<<<",">",">>","2>"};
+        std::vector<std::string> ops = {"<","<<","<<<",">",">>","2>","|"};
         for(size_t i = 0; i < tokens.size(); i++)
         {
-            //std::cout << tokens[i] << std::endl;
             auto it = std::find(ops.begin(), ops.end(), tokens[i]);
             if (it != ops.end() && i + 1 < tokens.size())
             {
-                cmd.redirect.push_back(std::make_pair(tokens[i], tokens[i + 1]));
-                tokens.erase(tokens.begin() + i + 1); 
-                tokens.erase(tokens.begin() + i);
-                i--; // step back since element was removed 
+                if(tokens[i] == "|")
+                {
+                  cmd.is_pipe = true;  
+                }
+                else
+                {
+                    cmd.redirect.push_back(std::make_pair(tokens[i], tokens[i + 1]));
+                    tokens.erase(tokens.begin() + i + 1); 
+                    tokens.erase(tokens.begin() + i);
+                    i--; // step back since element was removed 
+                }
             }
         }
     }

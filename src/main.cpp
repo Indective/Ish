@@ -8,6 +8,13 @@
 #include <string>
 #include <unistd.h>
 
+// TO DO : (timeline)
+// Feat : Implement piping
+// Refactor : merge the 2 Execute functions into one (exec fg and exec bg)
+// Refactor : ExecResult is becoming redundant
+// Refactor : Treat a foreground proccess and a background proccess as one job in JobControl
+// Refactor : refactor and improve job control
+
 int main()
 {
     Environment environ;
@@ -36,13 +43,11 @@ int main()
         command.tokens = CommandParsing::parse_command(input, command);        
         if(!command.tokens.empty())
         {
-            command.is_background = JobControl::handle_background(command.tokens);
             environ.replace_alias(command); // look for aliases, if found, replace them in command.arg
             result = CommandExecuting::handle_execution(command);
         }
 
         JobControl::reap_finished_jobs();
-        CommandExecuting::Restore_file_descriptors();
         free(input); // (hopefully) avoid segfaults
     }
 
