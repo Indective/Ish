@@ -1,0 +1,3 @@
+alias ..="cd .."
+alias cls="clear"
+alias prjc="cd home/indective/projects/Ish
