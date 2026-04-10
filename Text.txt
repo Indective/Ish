@@ -1,0 +1,8 @@
+build
+build_debug
+CMakeLists.txt
+include
+README.md
+src
+TestUnit
+Text.txt

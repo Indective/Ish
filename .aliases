@@ -1,3 +1,6 @@
 alias ..="cd .."
 alias cls="clear"
+<<<<<<< HEAD
 alias prjc="cd home/indective/projects/Ish
+=======
+>>>>>>> db721ab222094a1b1b7d704edd03c43eb265182f
