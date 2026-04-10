@@ -4,9 +4,10 @@
 #include <string>
 #include <iostream>
 #include <vector>
+#include <optional>
 
 namespace CommandParsing
 {
-    std::vector<std::string> parse_command(const std::string& line, Command& cmd);
+    std::optional<PipeLine> parse_command(const std::string& line);
     void handle_redirection(std::vector<std::string>& tokens, Command & cmd);
 }

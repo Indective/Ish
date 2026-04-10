@@ -5,17 +5,37 @@
 
 namespace CommandParsing
 {
-    std::vector<std::string> parse_command(const std::string& line, Command & cmd)
+    std::optional<PipeLine> parse_command(const std::string &line)
     {
+        PipeLine p;
         std::vector<std::string> tokens;
         std::string token;
         bool in_quote = false;
-
-        for (const char c : line) 
+        
+        for(char c : line)
         {
             if(c == '"')
             {
                 in_quote = !in_quote;
+            }
+            else if(c == '|' && !in_quote)
+            {
+                if(token.empty() && tokens.empty())
+                {
+                    std::cerr << "Error: incorrect command syntax; expected command before |" << std::endl;
+                    return std::nullopt;
+                }
+                if (!token.empty())
+                {
+                    tokens.push_back(token);
+                    token.clear();
+                }
+                p.commands.push_back({tokens});
+                tokens.clear();
+            }
+            else if(c == '&' && !in_quote)
+            {
+                p.is_background = true;
             }
             else if(c == ' ' && !in_quote)
             {
@@ -30,20 +50,33 @@ namespace CommandParsing
                 token += c;
             }
         }
+
+        //check for incorrect syntax
+        if(in_quote)
+        {
+            std::cerr << "Error: incorrect command syntax; expected closing quote" << std::endl;
+            return std::nullopt;
+        }
+        if(line.back() == '|')
+        {
+            std::cerr << "Error: incorrect command syntax; expected command after |" << std::endl;
+           return std::nullopt; 
+        }
         if(!token.empty())
         {
             tokens.push_back(token);
         }
-        if(in_quote)
+
+        // add last token
+        if(!tokens.empty())
         {
-            std::cout << "Incorrect command syntax; Expected quote" << std::endl;
-            return {};
+            p.commands.push_back({tokens});
         }
-        handle_redirection(tokens, cmd);
-        return tokens;
+
+        return p;
     }
 
-    void handle_redirection(std::vector<std::string>& tokens, Command & cmd)
+    /*void handle_redirection(std::vector<std::string> &tokens, Command &cmd)
     {
         std::vector<std::string> ops = {"<","<<","<<<",">",">>","2>","|"};
         for(size_t i = 0; i < tokens.size(); i++)
@@ -65,4 +98,5 @@ namespace CommandParsing
             }
         }
     }
+    */
 }
