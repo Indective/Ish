@@ -13,6 +13,17 @@ struct Command
 {
     std::vector<std::string> tokens;
     std::vector<std::pair<std::string, std::string>> redirect;
+
+    Command(std::vector<std::string> tokens)
+    {
+        this->tokens = tokens;
+        this->redirect = {};
+    }
+    Command()
+    {
+        tokens = {};
+        redirect = {};
+    }
 };
 
 struct PipeLine
