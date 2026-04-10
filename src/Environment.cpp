@@ -5,48 +5,65 @@
 #include <fstream>
 #include <string>
 #include <readline/history.h>
+#include <vector>
+
+std::unordered_map<std::string, std::string> Environment::aliases;
 
 std::vector<std::string> Environment::parse_line(const std::string& line)
 {
-    size_t first_space = line.find(' ');
-    if(first_space == std::string::npos)
+    std::vector<std::string> tokens;
+    std::string token;
+    bool in_quote = false;
+
+    for (const char c : line) 
     {
-        return {};
+        if(c == '"')
+        {
+            in_quote = !in_quote;
+        }
+        else if(c == ' ' && !in_quote)
+        {
+            if(!token.empty())
+            {
+                tokens.push_back(token);
+                token.clear();
+            }
+        }
+        else
+        {
+            token += c;
+        }
+    }
+    if(!token.empty())
+    {
+        tokens.push_back(token);
     }
 
-    std::string command = line.substr(0, first_space);
-    std::string assignment = line.substr(first_space + 1);
-
-    if(command != "alias")
+    if(in_quote)
     {
+        std::cout << "Incorrect alias syntax; Expected quote" << std::endl;
         return {};
     }
-
-    size_t equal = assignment.find('=');
-    if(equal == std::string::npos)
-    {
-        return {};
-    }
-
-    std::string name  = assignment.substr(0, equal);
-    std::string value = assignment.substr(equal + 1);
-
-    if(name.empty())
-    {
-        return {};
-    }
-
-    if(value.length() < 2 || value.front() != '"' || value.back() != '"')
-    {
-        return {};
-    }
-
-    value = value.substr(1, value.length() - 2);
-
-    return {name, value};
+    return tokens;
 }
 
-ExecResult Environment::load_aliases()
+bool Environment::check_syntax(const std::vector<std::string> &tokens)
+{
+    if(tokens.size() != 4) return false;
+    if(!(tokens[0] == "alias"))
+    {
+        std::cerr << "Incorrect command syntax, Expected 'alias'" << std::endl;
+        return false;
+    }
+    if(!(tokens[2] == "="))
+    {
+        std::cerr << "Incorrect command syntax, Expected '=' after '" << tokens[1] << "'" << std::endl;
+        return false;
+    }
+    return true;
+}
+
+void Environment::load_aliases()
 {
     std::string line;
     std::ifstream inputFile(filename);
@@ -61,12 +78,19 @@ ExecResult Environment::load_aliases()
             {
                 invalid_line ++;
                 tokens = parse_line(line);
-                if(tokens.empty())
+                if(!tokens.empty())
                 {
-                    std::cerr << "Invalid alias ignored; Invalid command syntax at line : " << invalid_line << std::endl;
-                    continue;
+                    if(check_syntax(tokens))
+                    {
+                        aliases[tokens[1]] = tokens[3];
+                    }
+                    else
+                    {
+                        std::cerr << "Could not load aliases, Errors occurred at line : " << invalid_line << std::endl;
+                        return;
+                    }
                 }
-                aliases[tokens[0]] = tokens[1];
+                
             }
         }
         inputFile.close();
@@ -76,28 +100,21 @@ ExecResult Environment::load_aliases()
         std::cerr << "Unable to load aliases, Error opening file :  .aliases" << std::endl;
     }
 
-    return ExecResult::OK;
 }
 
 void Environment::replace_alias(Command &cmd)
 {
-    std::vector<std::string> result;
     for (size_t i = 0; i < cmd.tokens.size(); i++)
     {
         auto it = aliases.find(cmd.tokens[i]);
         if (it != aliases.end())
         {
-            // expand alias value into sub-tokens and splice them in
-            std::vector<std::string> expanded = CommandParsing::parse_command(it->second, cmd);
-
-            result.insert(result.end(), expanded.begin(), expanded.end());
-        }
-        else
-        {
-            result.push_back(cmd.tokens[i]);
+            cmd.tokens.erase(cmd.tokens.begin() + i);
+            std::vector<std::string> alias_command = parse_line(it->second);
+            cmd.tokens.insert(cmd.tokens.begin() + i, alias_command.begin(), alias_command.end());
+            i += alias_command.size();
         }
     }
-    cmd.tokens = result;
 }
 
 std::string Environment::shorten_path(const std::string &path)
