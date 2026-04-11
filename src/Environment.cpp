@@ -6,14 +6,16 @@
 #include <string>
 #include <readline/history.h>
 #include <vector>
+#include <optional>
 
 std::unordered_map<std::string, std::string> Environment::aliases;
 
-std::vector<std::string> Environment::parse_line(const std::string& line)
+std::optional<std::vector<std::string>> Environment::parse_line(const std::string& line)
 {
     std::vector<std::string> tokens;
     std::string token;
     bool in_quote = false;
+
 
     for (const char c : line) 
     {
@@ -39,25 +41,33 @@ std::vector<std::string> Environment::parse_line(const std::string& line)
         tokens.push_back(token);
     }
 
-    if(in_quote)
+    if(check_syntax(tokens, in_quote, line.find('"') != std::string::npos, line))
     {
-        std::cout << "Incorrect alias syntax; Expected quote" << std::endl;
-        return {};
+        return tokens;
     }
-    return tokens;
+    return std::nullopt;
 }
 
-bool Environment::check_syntax(const std::vector<std::string> &tokens)
+bool Environment::check_syntax(const std::vector<std::string> &tokens, const bool &in_quote, const bool &found_quote, const std::string& line)
 {
-    if(tokens.size() != 4) return false;
     if(!(tokens[0] == "alias"))
     {
         std::cerr << "Incorrect command syntax, Expected 'alias'" << std::endl;
         return false;
     }
-    if(!(tokens[2] == "="))
+    else if(!(tokens[2] == "="))
     {
-        std::cerr << "Incorrect command syntax, Expected '=' after '" << tokens[1] << "'" << std::endl;
+        std::cerr << "Incorrect command syntax, Expected '=' after variable name : (" << tokens[1] << ")" << std::endl;
+        return false;
+    }
+    if(in_quote || !found_quote || line.back() != '"')
+    {
+        std::cout << "Incorrect alias syntax; Expected quote" << std::endl;
+        return false;
+    }
+    else if(tokens.size() != 4)
+    {
+        std::cerr << "Incorrect command syntax, too many arguments" << std::endl;
         return false;
     }
     return true;
@@ -67,7 +77,7 @@ void Environment::load_aliases()
 {
     std::string line;
     std::ifstream inputFile(filename);
-    std::vector<std::string> tokens;
+    std::optional<std::vector<std::string>> tokens;
     int invalid_line = 0; // get the index of the line with invalid syntax(if there are any)
 
     if (inputFile.is_open()) 
@@ -78,19 +88,15 @@ void Environment::load_aliases()
             {
                 invalid_line ++;
                 tokens = parse_line(line);
-                if(!tokens.empty())
+                if(tokens)
                 {
-                    if(check_syntax(tokens))
-                    {
-                        aliases[tokens[1]] = tokens[3];
-                    }
-                    else
-                    {
-                        std::cerr << "Could not load aliases, Errors occurred at line : " << invalid_line << std::endl;
-                        return;
-                    }
+                    aliases[(*tokens)[1]] = (*tokens)[3];
                 }
-                
+                else
+                {
+                    std::cerr << "Could not load aliases, Incorrect syntax at line : " << invalid_line << std::endl;
+                    return;
+                }
             }
         }
         inputFile.close();
@@ -110,9 +116,9 @@ void Environment::replace_alias(Command &cmd)
         if (it != aliases.end())
         {
             cmd.tokens.erase(cmd.tokens.begin() + i);
-            std::vector<std::string> alias_command = parse_line(it->second);
-            cmd.tokens.insert(cmd.tokens.begin() + i, alias_command.begin(), alias_command.end());
-            i += alias_command.size();
+            std::optional<std::vector<std::string>> alias_command = parse_line(it->second);
+            cmd.tokens.insert(cmd.tokens.begin() + i, alias_command->begin(), alias_command->end());
+            i += alias_command->size();
         }
     }
 }

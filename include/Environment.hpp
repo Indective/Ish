@@ -1,6 +1,7 @@
 #include "Command.hpp"
 #include <unordered_map>
 #include <string>
+#include <optional>
 
 class Environment
 {
@@ -14,8 +15,8 @@ private:
 
     // functions 
     std::string shorten_path(const std::string& path);
-    std::vector<std::string> parse_line(const std::string& line);
-    bool check_syntax(const std::vector<std::string>& tokens);
+    std::optional<std::vector<std::string>> parse_line(const std::string& line);
+    bool check_syntax(const std::vector<std::string> &tokens, const bool &in_quote, const bool &found_quote, const std::string& line);
 
 public:
     void load_aliases();
