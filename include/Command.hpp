@@ -1,6 +1,7 @@
 #pragma once
 #include <iostream>
 #include <vector>
+#include <array>
 
 enum class ExecResult 
 {
@@ -28,6 +29,7 @@ struct Command
 
 struct PipeLine
 {
+    std::vector<std::array<int, 2>> pipes;
     std::vector<Command> commands;
     bool is_background = false;
 };

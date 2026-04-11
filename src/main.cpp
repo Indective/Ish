@@ -7,13 +7,7 @@
 #include <iostream>
 #include <string>
 #include <unistd.h>
-
-// TO DO : (timeline)
-// Feat : Implement piping
-// Refactor : merge the 2 Execute functions into one (exec fg and exec bg)
-// Refactor : ExecResult is becoming redundant
-// Refactor : Treat a foreground proccess and a background proccess as one job in JobControl
-// Refactor : refactor and improve job control
+#include <optional>
 
 int main()
 {
@@ -25,12 +19,12 @@ int main()
     char* full_path;
     char* input;
 
-    environ.load_aliases(); // pretty self explanitory, load aliases into memory (using an unordered_map)
+    environ.load_aliases();
     signal(SIGCHLD, JobControl::sigchldHandler);
 
     while(result != ExecResult::EXIT)
     {
-        Command command;
+        
         full_path = getcwd(buffer,MAX_BUFFER_LENGTH); 
 
         input = environ.get_input(environ.build_prompt(full_path).c_str());
@@ -40,14 +34,19 @@ int main()
             break;
         }
 
-        command.tokens = CommandParsing::parse_command(input, command);        
-        if(!command.tokens.empty())
+        std::optional<PipeLine> p = CommandParsing::parse_command(input);  
+        
+        if(pipe)
         {
-            environ.replace_alias(command); // look for aliases, if found, replace them in command.arg
-            result = CommandExecuting::handle_execution(command);
+            for(auto &it : p->commands)
+            {
+                environ.replace_alias(it); // exppand aliases in all commands 
+            }
+            result = CommandExecuting::handle_execution(p);
         }
 
         JobControl::reap_finished_jobs();
+        
         free(input); // (hopefully) avoid segfaults
     }
 

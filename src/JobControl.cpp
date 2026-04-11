@@ -1,16 +1,14 @@
 #include "JobControl.hpp"
-#include <string>
-#include <vector>
+#include <algorithm>
 
 namespace JobControl
 {
     int job_counter = 0;
-    std::vector<Job> jobs;
+    std::vector<Job> background_jobs;
 
-    // move this into parsing section
     bool handle_background(std::vector<std::string>& tokens)
     {
-        if(tokens.back() == "&")
+        if (tokens.back() == "&")
         {
             tokens.pop_back();
             return true;
@@ -22,15 +20,21 @@ namespace JobControl
     {
         int status;
         pid_t pid;
-        // Loop because multiple children could have exited between signals
-        while ((pid = waitpid(-1, &status, WNOHANG)) > 0) 
+
+        // Reap all finished children
+        while ((pid = waitpid(-1, &status, WNOHANG)) > 0)
         {
-            // mark the matching job as Done
-            for (auto& job : jobs) 
+            for (auto& job : background_jobs)
             {
-                if (job.pid == pid) 
+                auto it = std::find(job.pids.begin(), job.pids.end(), pid);
+                if (it != job.pids.end())
                 {
-                    job.status = JobStatus::DONE;
+                    job.pids.erase(it);
+
+                    if (job.pids.empty())
+                    {
+                        job.status = JobStatus::DONE;
+                    }
                     break;
                 }
             }
@@ -39,19 +43,28 @@ namespace JobControl
 
     void reap_finished_jobs()
     {
-        for(auto &job : jobs)
+        for (const auto& job : background_jobs)
         {
-            if(job.status == JobStatus::DONE)
+            if (job.status == JobStatus::DONE)
             {
                 rl_on_new_line();
                 std::cout << "[" << job.id << "]+" << "\tdone\t";
-                for(auto &it : job.command)
+
+                for (const auto& command : job.commands)
                 {
-                    std::cout << it << " ";
+                    for(const auto &it : command.tokens)
+                    {
+                        std::cout << it << std::endl;
+                    }
                 }
+
                 std::cout << std::endl;
             }
         }
-        std::erase_if(jobs, [](Job job) {return job.status == JobStatus::DONE;});
+
+        std::erase_if(background_jobs, [](const Job& job)
+        {
+            return job.status == JobStatus::DONE;
+        });
     }
 }

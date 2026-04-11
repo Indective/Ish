@@ -11,8 +11,8 @@ namespace CommandParsing
         std::vector<std::string> tokens;
         std::string token;
         bool in_quote = false;
-        
-        for(char c : line)
+
+        for(const char c : line)
         {
             if(c == '"')
             {
@@ -73,30 +73,26 @@ namespace CommandParsing
             p.commands.push_back({tokens});
         }
 
+        for(auto &command : p.commands)
+        {
+            handle_redirection(command);
+        }
         return p;
     }
 
-    /*void handle_redirection(std::vector<std::string> &tokens, Command &cmd)
+    void handle_redirection(Command &cmd)
     {
         std::vector<std::string> ops = {"<","<<","<<<",">",">>","2>","|"};
-        for(size_t i = 0; i < tokens.size(); i++)
+        for(size_t i = 0; i < cmd.tokens.size(); i++)
         {
-            auto it = std::find(ops.begin(), ops.end(), tokens[i]);
-            if (it != ops.end() && i + 1 < tokens.size())
+            auto it = std::find(ops.begin(), ops.end(), cmd.tokens[i]);
+            if (it != ops.end() && i + 1 < cmd.tokens.size())
             {
-                if(tokens[i] == "|")
-                {
-                  cmd.is_pipe = true;  
-                }
-                else
-                {
-                    cmd.redirect.push_back(std::make_pair(tokens[i], tokens[i + 1]));
-                    tokens.erase(tokens.begin() + i + 1); 
-                    tokens.erase(tokens.begin() + i);
-                    i--; // step back since element was removed 
-                }
+                cmd.redirect.push_back(std::make_pair(cmd.tokens[i], cmd.tokens[i + 1]));
+                cmd.tokens.erase(cmd.tokens.begin() + i + 1); 
+                cmd.tokens.erase(cmd.tokens.begin() + i);
+                i--; // step back since element was removed    
             }
         }
     }
-    */
 }

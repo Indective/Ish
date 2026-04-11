@@ -9,5 +9,5 @@
 namespace CommandParsing
 {
     std::optional<PipeLine> parse_command(const std::string& line);
-    void handle_redirection(std::vector<std::string>& tokens, Command & cmd);
+    void handle_redirection(Command & cmd);
 }

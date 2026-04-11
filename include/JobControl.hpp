@@ -19,16 +19,17 @@ enum class JobStatus
 struct Job
 {
     int id;
-    pid_t pid;
-    std::vector<std::string> command;
+    std::vector<pid_t> pids;
+    std::vector<Command> commands;
     JobStatus status;
 };
 
 namespace JobControl
 {
     extern int job_counter;
-    extern std::vector<Job> jobs;
+    extern std::vector<Job> background_jobs;
+
     bool handle_background(std::vector<std::string>& tokens);
     void sigchldHandler(int);
     void reap_finished_jobs();
-};
+}

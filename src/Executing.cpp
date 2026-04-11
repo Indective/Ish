@@ -7,6 +7,7 @@
 #include <fcntl.h>
 #include <algorithm>
 #include <iterator>
+#include <optional>
 
 namespace CommandExecuting
 {
@@ -38,7 +39,94 @@ namespace CommandExecuting
         {"<<<",Redirect_stdin_herestr}
     };
 
-    ExecResult execute_foreground(const Command& cmd)
+    ExecResult execute_pipe(std::optional<PipeLine>& p)
+    {
+        size_t cmd_count = p->commands.size();
+
+        p->pipes.resize(cmd_count - 1);
+
+        for (size_t i = 0; i < p->pipes.size(); i++)
+        {
+            if (pipe(p->pipes[i].data()) == -1)
+            {
+                perror("pipe");
+                return ExecResult::ERROR;
+            }
+        }
+
+        std::vector<pid_t> pids;
+        pids.reserve(cmd_count);
+
+        for (size_t i = 0; i < cmd_count; i++)
+        {
+            pid_t pid = fork();
+
+            if (pid == -1)
+            {
+                perror("fork");
+                return ExecResult::ERROR;
+            }
+
+            if (pid == 0)
+            {
+                // read from previous pipe
+                if (i > 0)
+                {
+                    dup2(p->pipes[i - 1][0], STDIN_FILENO);
+                }
+
+                // write to next pipe
+                if (i < cmd_count - 1)
+                {
+                    dup2(p->pipes[i][1], STDOUT_FILENO);
+                }
+
+                close_pipes(p);
+
+                std::vector<char*> argv;
+                for (auto &arg : p->commands[i].tokens)
+                {
+                    argv.push_back(const_cast<char*>(arg.c_str()));
+                }
+                argv.push_back(nullptr);
+
+                for (auto &[op, fn] : p->commands[i].redirect)
+                {
+                    redircetion_handler[op](fn);
+                }
+
+                setpgid(0,0);
+                execvp(argv[0], argv.data());
+                perror("execvp");
+                _exit(EXIT_FAILURE);
+            }
+
+            // Parent
+            pids.push_back(pid);
+        }
+
+        close_pipes(p);
+
+        if (p->is_background)
+        {
+            JobControl::background_jobs.push_back({++JobControl::job_counter,pids,p->commands,JobStatus::RUNNING});
+            std::cout << "[bg pid group started]" << std::endl;
+            return ExecResult::OK;
+        }
+        else
+        {
+            for (pid_t pid : pids)
+            {
+                waitpid(pid, nullptr, 0);
+            }
+
+            return ExecResult::OK;
+        }
+
+        return ExecResult::OK;
+    }
+
+    ExecResult execute_external(const Command &command, const bool &is_background)
     {
         std::vector<char*> argv;
         pid_t pid = fork();
@@ -49,13 +137,13 @@ namespace CommandExecuting
         }
         else if(pid == 0) // code accessible only by the child process
         {
-            for(auto &arg : cmd.tokens)
+            for(auto &arg : command.tokens)
             {
                 argv.push_back(const_cast<char*>(arg.c_str()));
             }
             argv.push_back(nullptr);
 
-            for(auto &[op, fn] : cmd.redirect)
+            for(auto &[op, fn] : command.redirect)
             {
                 redircetion_handler[op](fn);
             }
@@ -67,73 +155,48 @@ namespace CommandExecuting
         }
         else
         {
-            
-            waitpid(pid,nullptr,0);
-            return ExecResult::OK;
-            
+            if (is_background)
+            {
+                JobControl::background_jobs.push_back({++JobControl::job_counter,{pid},{command},JobStatus::RUNNING});
+                std::cout << "[" << JobControl::job_counter << "] " << pid << std::endl; 
+                return ExecResult::OK;
+            }
+            else
+            {
+                waitpid(pid,nullptr,0);
+                return ExecResult::OK;
+            }            
         }
-        return ExecResult::ERROR;     
+        return ExecResult::ERROR;   
     }
 
-    ExecResult execute_background(const Command& cmd)
+    ExecResult handle_execution(std::optional<PipeLine> &p)
     {
-        std::vector<char*> argv;
-        pid_t pid = fork();
-        if(pid == -1) // forking failed 
+        if (p->commands.size() == 1) // single command
         {
-            perror("Failed to fork process !");
-            return ExecResult::ERROR;
-        }
-        else if(pid == 0) // code accessible only by the child process
-        {
-            for(auto &arg : cmd.tokens)
+            if(is_builtin(p->commands[0].tokens))
             {
-                argv.push_back(const_cast<char*>(arg.c_str()));
+                return execute_builtin(p->commands[0]);
             }
-            argv.push_back(nullptr);
-
-            for(auto &[op, fn] : cmd.redirect)
+            else
             {
-                redircetion_handler[op](fn);
+                return execute_external(p->commands[0], p->is_background);
             }
-            
-            execvp(argv[0],argv.data());
-            perror("ish");
-            _exit(EXIT_FAILURE);
-            
         }
-        else
+        else // execute and set up pipe(s)
         {
-            JobControl::jobs.push_back({++JobControl::job_counter ,pid,cmd.tokens , JobStatus::RUNNING});
-            std::cout << "[" << JobControl::job_counter << "] " << pid << std::endl; 
-            return ExecResult::OK;
-            
+            execute_pipe(p);
         }
-        return ExecResult::ERROR;     
+        return ExecResult::ERROR;
     }
 
-    ExecResult execute_pipe(Command &cmd)
+    void close_pipes(std::optional<PipeLine> &p)
     {
-        auto it = std::find(cmd.tokens.begin(), cmd.tokens.end(),"|");
-        size_t pipe_index = std::distance(cmd.tokens.begin(), it);
-        cmd.tokens.erase(cmd.tokens.begin() + pipe_index);
-        pipe_index--;
-
-        Command cmd1, cmd2;
-        std::vector<std::string> tokens1(std::make_move_iterator(cmd.tokens.begin()), std::make_move_iterator(cmd.tokens.begin() + pipe_index));
-        std::vector<std::string> tokens2(std::make_move_iterator(cmd.tokens.begin() + pipe_index),std::make_move_iterator(cmd.tokens.end()));
-
-        cmd1.tokens = tokens1;
-        cmd2.tokens = tokens2;
-
-        // create and set up pipe
-        int fd[2];
-        if(pipe(fd) == -1)
+        for(auto &it : p->pipes)
         {
-            perror("pipe : ");
+            close(it[0]);
+            close(it[1]);
         }
-        
-
     }
 
     ExecResult execute_builtin(const Command & cmd)
@@ -149,33 +212,6 @@ namespace CommandExecuting
     bool is_builtin(const std::vector<std::string>& tokens)
     {
         return builtins.find(tokens[0]) != builtins.end();
-    }
-
-    ExecResult handle_execution(Command &cmd)
-    {
-        if(cmd.is_pipe)
-        {
-            return execute_pipe(cmd);
-        }
-        else
-        {
-            if(is_builtin(cmd.tokens))
-            {
-                return execute_builtin(cmd);
-            }
-
-            else
-            {
-                if(JobControl::handle_background(cmd.tokens))
-                {
-                    return execute_background(cmd);
-                }
-                else
-                {
-                    return execute_foreground(cmd);
-                }
-            }
-        } 
     }
 
     //Builtin implementations
@@ -203,7 +239,7 @@ namespace CommandExecuting
 
     ExecResult builtin_exit(const std::vector<std::string>& tokens)
     {
-        for(auto &it : JobControl::jobs)
+        for(auto &it : JobControl::background_jobs)
         {
             if(it.status == JobStatus::RUNNING)
             {
@@ -216,15 +252,18 @@ namespace CommandExecuting
 
     ExecResult builtin_jobs(const std::vector<std::string>& tokens)
     {
-        for(auto &job : JobControl::jobs)
+        for(auto &job : JobControl::background_jobs)
         {
             if(job.status == JobStatus::RUNNING)
             {
                 rl_on_new_line();
                 std::cout << "[" << job.id << "]+" << "\trunning\t";
-                for(auto &it : job.command)
+                for(auto &command : job.commands)
                 {
-                    std::cout << it << " ";
+                    for(auto &token : command.tokens)
+                    {
+                        std::cout << token << std::endl;
+                    }
                 }
                 std::cout << std::endl;
             }
