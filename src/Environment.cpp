@@ -10,7 +10,7 @@
 
 std::unordered_map<std::string, std::string> Environment::aliases;
 
-std::optional<std::vector<std::string>> Environment::parse_line(const std::string& line)
+std::optional<std::vector<std::string>> Environment::parse_line(const std::string& line, const bool& is_alias_line)
 {
     std::vector<std::string> tokens;
     std::string token;
@@ -41,11 +41,22 @@ std::optional<std::vector<std::string>> Environment::parse_line(const std::strin
         tokens.push_back(token);
     }
 
-    if(check_syntax(tokens, in_quote, line.find('"') != std::string::npos, line))
+    if(is_alias_line)
+    {
+        
+        if(check_syntax(tokens, in_quote, line.find('"') != std::string::npos, line))
+        {
+            return tokens;
+        }
+        else 
+        {
+            return std::nullopt;
+        }
+    }
+    else
     {
         return tokens;
     }
-    return std::nullopt;
 }
 
 bool Environment::check_syntax(const std::vector<std::string> &tokens, const bool &in_quote, const bool &found_quote, const std::string& line)
@@ -87,7 +98,7 @@ void Environment::load_aliases()
             if(!line.empty())
             {
                 invalid_line ++;
-                tokens = parse_line(line);
+                tokens = parse_line(line, true);
                 if(tokens)
                 {
                     aliases[(*tokens)[1]] = (*tokens)[3];
@@ -116,7 +127,7 @@ void Environment::replace_alias(Command &cmd)
         if (it != aliases.end())
         {
             cmd.tokens.erase(cmd.tokens.begin() + i);
-            std::optional<std::vector<std::string>> alias_command = parse_line(it->second);
+            std::optional<std::vector<std::string>> alias_command = parse_line(it->second, false);
             cmd.tokens.insert(cmd.tokens.begin() + i, alias_command->begin(), alias_command->end());
             i += alias_command->size();
         }

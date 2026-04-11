@@ -15,7 +15,7 @@ private:
 
     // functions 
     std::string shorten_path(const std::string& path);
-    std::optional<std::vector<std::string>> parse_line(const std::string& line);
+    std::optional<std::vector<std::string>> parse_line(const std::string& line, const bool& is_alias_line);
     bool check_syntax(const std::vector<std::string> &tokens, const bool &in_quote, const bool &found_quote, const std::string& line);
 
 public:
