@@ -6,8 +6,8 @@ standard UNIX-based shell, includes all basic functionality of a shell
 
 ## Feature Plans
 
-- Redirection
-- Piping
+- Redirection (done)
+- Piping (done (mostly))
 - Script automation (maybe minimal)
 
 ## Requirements
