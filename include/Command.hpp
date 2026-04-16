@@ -5,9 +5,8 @@
 
 enum class ExecResult 
 {
-    OK,
-    EXIT,
-    ERROR
+    Exit,
+    Continue
 };
 
 struct Command
@@ -31,6 +30,6 @@ struct PipeLine
 {
     std::vector<std::array<int, 2>> pipes;
     std::vector<Command> commands;
-    bool is_background = false;
+    bool is_background = false , is_pipe = false;
 };
 

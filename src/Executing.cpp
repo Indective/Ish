@@ -42,6 +42,9 @@ namespace CommandExecuting
     ExecResult execute_pipe(std::optional<PipeLine>& p)
     {
         size_t cmd_count = p->commands.size();
+        pid_t pgid = 0;
+        std::vector<pid_t> pids;
+        pids.reserve(cmd_count);
 
         p->pipes.resize(cmd_count - 1);
 
@@ -50,80 +53,94 @@ namespace CommandExecuting
             if (pipe(p->pipes[i].data()) == -1)
             {
                 perror("pipe");
-                return ExecResult::ERROR;
+                return ExecResult::Continue;
             }
         }
-
-        std::vector<pid_t> pids;
-        pids.reserve(cmd_count);
 
         for (size_t i = 0; i < cmd_count; i++)
         {
             pid_t pid = fork();
-
-            if (pid == -1)
-            {
-                perror("fork");
-                return ExecResult::ERROR;
+            if (pid == -1) 
+            { 
+                perror("fork"); 
+                return ExecResult::Continue; 
             }
-
-            if (pid == 0)
+            else if (pid == 0) // child
             {
-                // read from previous pipe
+                // connect stdin
                 if (i > 0)
                 {
                     dup2(p->pipes[i - 1][0], STDIN_FILENO);
                 }
 
-                // write to next pipe
+                // connect stdout
                 if (i < cmd_count - 1)
                 {
                     dup2(p->pipes[i][1], STDOUT_FILENO);
                 }
-
-                close_pipes(p);
-
-                std::vector<char*> argv;
-                for (auto &arg : p->commands[i].tokens)
-                {
-                    argv.push_back(const_cast<char*>(arg.c_str()));
-                }
-                argv.push_back(nullptr);
 
                 for (auto &[op, fn] : p->commands[i].redirect)
                 {
                     redircetion_handler[op](fn);
                 }
 
-                setpgid(0,0);
+                close_pipes(p);
+
+                std::vector<char*> argv;
+                for (auto &arg : p->commands[i].tokens) 
+                {
+                    argv.push_back(const_cast<char*>(arg.c_str()));
+                }
+
+                argv.push_back(nullptr);
                 execvp(argv[0], argv.data());
-                perror("execvp");
+                perror("execvp : ");
                 _exit(EXIT_FAILURE);
             }
+            else // parent
+            {
+                if (i == 0) 
+                {
+                    pgid = pid;
+                }
+                if(setpgid(pid, pgid) == -1)
+                {
+                    perror("setpgid parent : ");
+                    return ExecResult::Continue;
+                }
+                pids.push_back(pid);
 
-            // Parent
-            pids.push_back(pid);
+                if (i > 0) 
+                {
+                    close(p->pipes[i - 1][0]);
+                }
+                if (i < cmd_count - 1)
+                {
+                    close(p->pipes[i][1]);
+                }
+            }
         }
 
-        close_pipes(p);
-
         if (p->is_background)
-        {
-            JobControl::background_jobs.push_back({++JobControl::job_counter,pids,p->commands,JobStatus::RUNNING});
-            std::cout << "[bg pid group started]" << std::endl;
-            return ExecResult::OK;
+        {   
+            JobControl::background_jobs.push_back({++JobControl::job_counter, pids, p->commands, JobStatus::RUNNING});
+            std::cout << "[" << JobControl::job_counter << "]";
+            for (auto &pid : pids) 
+            {
+                std::cout << " " << pid;
+            }
+            std::cout << std::endl;
+            return ExecResult::Continue;
         }
         else
         {
-            for (pid_t pid : pids)
+            for (pid_t pid : pids) 
             {
                 waitpid(pid, nullptr, 0);
             }
-
-            return ExecResult::OK;
+            return ExecResult::Continue;
         }
-
-        return ExecResult::OK;
+        return ExecResult::Continue;
     }
 
     ExecResult execute_external(const Command &command, const bool &is_background)
@@ -133,7 +150,7 @@ namespace CommandExecuting
         if(pid == -1) // forking failed 
         {
             perror("Failed to fork process !");
-            return ExecResult::ERROR;
+            return ExecResult::Continue;
         }
         else if(pid == 0) // code accessible only by the child process
         {
@@ -159,35 +176,43 @@ namespace CommandExecuting
             {
                 JobControl::background_jobs.push_back({++JobControl::job_counter,{pid},{command},JobStatus::RUNNING});
                 std::cout << "[" << JobControl::job_counter << "] " << pid << std::endl; 
-                return ExecResult::OK;
+                return ExecResult::Continue;
             }
             else
             {
                 waitpid(pid,nullptr,0);
-                return ExecResult::OK;
+                return ExecResult::Continue;
             }            
         }
-        return ExecResult::ERROR;   
+        return ExecResult::Continue;   
     }
 
     ExecResult handle_execution(std::optional<PipeLine> &p)
     {
-        if (p->commands.size() == 1) // single command
+        if (!p->is_pipe)
         {
-            if(is_builtin(p->commands[0].tokens))
+            for(auto &command : p->commands)
             {
-                return execute_builtin(p->commands[0]);
-            }
-            else
-            {
-                return execute_external(p->commands[0], p->is_background);
+                ExecResult result;
+                if(!is_builtin(command.tokens))
+                {
+                    result = execute_external(command, p->is_background);
+                }
+                else
+                {
+                    result = execute_builtin(command);
+                }
+                if(result == ExecResult::Exit)
+                {
+                    return result;
+                }
             }
         }
-        else // execute and set up pipe(s)
+        else
         {
-            execute_pipe(p);
+            return execute_pipe(p);
         }
-        return ExecResult::ERROR;
+        return ExecResult::Continue;
     }
 
     void close_pipes(std::optional<PipeLine> &p)
@@ -221,20 +246,20 @@ namespace CommandExecuting
         const char* dir_name;
         if (tokens.size() != 2)
         {
-            return ExecResult::ERROR;
+            return ExecResult::Continue;
         }
         dir_name = tokens[1].c_str();
 
         if (chdir(dir_name) == 0)
         {
-            return ExecResult::OK;
+            return ExecResult::Continue;
         }
         else 
         {
            std::cerr << "cd : Directory not found : " << dir_name << std::endl; 
         }
         
-        return ExecResult::ERROR;
+        return ExecResult::Continue;
     }
 
     ExecResult builtin_exit(const std::vector<std::string>& tokens)
@@ -244,10 +269,9 @@ namespace CommandExecuting
             if(it.status == JobStatus::RUNNING)
             {
                 std::cout << "Cannot exit, Background proccesses running" << std::endl;
-                return ExecResult::OK;
             }
         }
-        return ExecResult::EXIT;
+        return ExecResult::Exit;
     }
 
     ExecResult builtin_jobs(const std::vector<std::string>& tokens)
@@ -269,7 +293,7 @@ namespace CommandExecuting
             }
         }
 
-        return ExecResult::OK;
+        return ExecResult::Continue;
     }
 
     // redircetion_handler implementations
