@@ -29,7 +29,6 @@ namespace JobControl
     extern int job_counter;
     extern std::vector<Job> background_jobs;
 
-    bool handle_background(std::vector<std::string>& tokens);
     void sigchldHandler(int);
     void reap_finished_jobs();
 }

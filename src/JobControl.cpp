@@ -6,16 +6,6 @@ namespace JobControl
     int job_counter = 0;
     std::vector<Job> background_jobs;
 
-    bool handle_background(std::vector<std::string>& tokens)
-    {
-        if (tokens.back() == "&")
-        {
-            tokens.pop_back();
-            return true;
-        }
-        return false;
-    }
-
     void sigchldHandler(int)
     {
         int status;
@@ -48,13 +38,13 @@ namespace JobControl
             if (job.status == JobStatus::DONE)
             {
                 rl_on_new_line();
-                std::cout << "[" << job.id << "]+" << "\tdone\t";
+                std::cout << "[" << job.id << "]+" << "  done\t";
 
                 for (const auto& command : job.commands)
                 {
                     for(const auto &it : command.tokens)
                     {
-                        std::cout << it << std::endl;
+                        std::cout << it << " ";
                     }
                 }
 
@@ -66,5 +56,10 @@ namespace JobControl
         {
             return job.status == JobStatus::DONE;
         });
+
+        if(background_jobs.empty())
+        {
+            job_counter = 0;
+        }
     }
 }
