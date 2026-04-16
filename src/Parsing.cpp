@@ -1,25 +1,34 @@
 #include "Parsing.hpp"
+#include "ShellContext.hpp"
 #include <vector>
 #include <sstream>
 #include <algorithm> 
+#include <string>
 
 namespace CommandParsing
 {
-    std::optional<PipeLine> parse_command(const std::string &line)
+    std::optional<PipeLine> parse_command(std::string line)
     {
+        ShellContext shell;
         PipeLine p;
         std::vector<std::string> tokens;
         std::string token;
         bool in_quote = false;
 
-        for(const char c : line)
+        if(line.back() == '&')
         {
-            if(c == '"')
+            p.is_background = true;
+            line.pop_back();
+        }
+        for(size_t i = 0; i < line.size(); i++)
+        {
+            if(line[i] == '"')
             {
                 in_quote = !in_quote;
             }
-            else if(c == '|' && !in_quote)
+            else if(line[i] == '|' && !in_quote)
             {
+                p.is_pipe = true;
                 if(token.empty() && tokens.empty())
                 {
                     std::cerr << "Error: incorrect command syntax; expected command before |" << std::endl;
@@ -33,11 +42,7 @@ namespace CommandParsing
                 p.commands.push_back({tokens});
                 tokens.clear();
             }
-            else if(c == '&' && !in_quote)
-            {
-                p.is_background = true;
-            }
-            else if(c == ' ' && !in_quote)
+            else if(line[i] == ' ' && !in_quote)
             {
                 if(!token.empty())
                 {
@@ -45,9 +50,23 @@ namespace CommandParsing
                     token.clear();
                 }
             }
+            else if(line[i] == '&' && !in_quote)
+            {
+                if(i < line.size() - 1 && line[i + 1] == '&')
+                {
+                    if(!tokens.empty())
+                    {
+                        i++;
+                        p.commands.push_back({tokens});
+                        token.clear(); // just to be safe
+                        tokens.clear();
+                    }
+                }
+                
+            }
             else
             {
-                token += c;
+                token += line[i];
             }
         }
 
@@ -67,7 +86,6 @@ namespace CommandParsing
             tokens.push_back(token);
         }
 
-        // add last token
         if(!tokens.empty())
         {
             p.commands.push_back({tokens});
@@ -75,6 +93,7 @@ namespace CommandParsing
 
         for(auto &command : p.commands)
         {
+            shell.replace_alias(command);
             handle_redirection(command);
         }
         return p;

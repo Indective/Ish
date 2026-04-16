@@ -8,6 +8,6 @@
 
 namespace CommandParsing
 {
-    std::optional<PipeLine> parse_command(const std::string& line);
+    std::optional<PipeLine> parse_command(std::string line);
     void handle_redirection(Command & cmd);
 }
