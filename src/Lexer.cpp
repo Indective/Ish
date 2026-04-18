@@ -13,7 +13,7 @@ const std::map<std::string, TokenType> Lexer::redirection_ops =
     {"<<<",TokenType::STDIN_HERESTRING}
 };
 
-std::vector<Token> Lexer::tokenize(const std::string &line)
+std::optional<std::vector<Token>> Lexer::tokenize(const std::string &line)
 {
     std::vector<Token> tokens;
     Token token;
@@ -44,7 +44,7 @@ std::vector<Token> Lexer::tokenize(const std::string &line)
 
             if (i == line.size())
             {
-                throw std::runtime_error("Tokenizer : Invalid command syntx; Unclosed quote.");
+                return std::nullopt;
             }
 
             tokens.push_back(token);
