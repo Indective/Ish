@@ -1,5 +1,6 @@
 #include "token.hpp"
 #include "Parser.hpp"
+#include <algorithm>
 #include <iostream>
 #include <optional>
 #include <string>
@@ -16,30 +17,28 @@ std::optional<Command> Parser::Parse_Command(const std::vector<Token>& tokens)
         {
             argv.push_back(tokens[i].value);
         }
-        else
+        else if (is_redirection_token(tokens[i]))
         {
-            // must have target after redirect
-            if (i + 1 >= tokens.size() ||
-                tokens[i + 1].type != TokenType::Word)
+            if (i + 1 >= tokens.size() || tokens[i + 1].type != TokenType::Word)
             {
-                std::cerr << "Parsing error: expected redirection target\n";
+                std::cerr << "Parsing error: expected redirection target" << std::endl;;
                 return std::nullopt;
             }
 
-            redirections.push_back(
-                Redirection{
-                    tokens[i].type,
-                    tokens[i + 1].value
-                }
-            );
+            redirections.push_back({tokens[i].type, tokens[i + 1].value});
 
-            ++i; // consume redirect target
+            ++i;
+        }
+        else
+        {
+            std::cerr << "Parsing error: invalid token in command context" << std::endl;
+            return std::nullopt;
         }
     }
 
     if (argv.empty())
     {
-        std::cerr << "Parsing error: expected command\n";
+        std::cerr << "Parsing error: expected command" << std::endl;
         return std::nullopt;
     }
 
@@ -57,7 +56,7 @@ std::optional<Pipeline> Parser::Parse_Pipeline(const std::vector<Token> &tokens)
         {
             if (current.empty())
             {
-                std::cerr << "Parsing error: expected command near '|'\n";
+                std::cerr << "Parsing error: expected command near '|'" << std::endl;
                 return std::nullopt;
             }
 
@@ -68,7 +67,7 @@ std::optional<Pipeline> Parser::Parse_Pipeline(const std::vector<Token> &tokens)
             p.commands.push_back(*command);
             current.clear();
         }
-        else if (tokens[i].type != TokenType::End)
+        else
         {
             current.push_back(tokens[i]);
         }
@@ -76,7 +75,7 @@ std::optional<Pipeline> Parser::Parse_Pipeline(const std::vector<Token> &tokens)
 
     if (current.empty())
     {
-        std::cerr << "Parsing error: expected command after '|'\n";
+        std::cerr << "Parsing error: expected command after '|'" << std::endl;
         return std::nullopt;
     }
 
@@ -96,12 +95,7 @@ std::optional<AndChain> Parser::Parse_Chain(const std::vector<Token>& tokens)
 
     for (size_t i = 0; i < tokens.size(); ++i)
     {
-        if (tokens[i].type == TokenType::Ampersand)
-        {
-            std::cerr << "Parsing error: '&' only allowed at end of command\n";
-            return std::nullopt;
-        }
-        else if (tokens[i].type == TokenType::AndAnd)
+        if (tokens[i].type == TokenType::AndAnd)
         {
             if (current.empty())
             {
@@ -116,7 +110,7 @@ std::optional<AndChain> Parser::Parse_Chain(const std::vector<Token>& tokens)
             chain.pipelines.push_back(*pipe);
             current.clear();
         }
-        else if (tokens[i].type != TokenType::End)
+        else
         {
             current.push_back(tokens[i]);
         }
@@ -137,27 +131,39 @@ std::optional<AndChain> Parser::Parse_Chain(const std::vector<Token>& tokens)
     return chain;
 }
 
+bool Parser::is_redirection_token(const Token &token)
+{
+    return  (token.type == TokenType::STDOUT_APPEND ||
+            token.type == TokenType::STDOUT_OVERWRITE ||
+            token.type == TokenType::STDIN ||
+            token.type == TokenType::STDIN_HEREDOC ||
+            token.type == TokenType::STDIN_HERESTRING ||
+            token.type == TokenType::STDERR);
+}
+
 std::optional<Job> Parser::Parse_Job(const std::vector<Token>& tokens)
 {
     if (tokens.empty())
     {
-        std::cerr << "Parsing error: empty input\n";
+        std::cerr << "Parsing error: empty input" << std::endl;
         return std::nullopt;
     }
 
     Job job;
     std::vector<Token> local_tokens = tokens;
 
-    if (!local_tokens.empty() &&
-        local_tokens.back().type == TokenType::Ampersand)
+    if (local_tokens.back().type == TokenType::Ampersand)
     {
         job.background = true;
         local_tokens.pop_back();
+        std::cout << "is_background" << std::endl;
     }
 
     auto chain = Parse_Chain(local_tokens);
     if (!chain)
+    {
         return std::nullopt;
+    }
 
     job.chain = *chain;
 

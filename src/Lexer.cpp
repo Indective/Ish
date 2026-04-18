@@ -105,7 +105,6 @@ std::optional<std::vector<Token>> Lexer::tokenize(const std::string &line)
         }
     }
 
-    tokens.push_back({TokenType::End});
     return tokens;
     
 }

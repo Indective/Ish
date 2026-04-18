@@ -1,7 +1,8 @@
 #pragma once
 #include <iostream>
 
-enum class TokenType {
+enum class TokenType 
+{
     Word,
     Pipe,
     AndAnd,
@@ -11,8 +12,7 @@ enum class TokenType {
     STDIN_HEREDOC, // << 
     STDIN_HERESTRING,// <<<
     STDERR, // 2>
-    STDIN, // < 
-    End
+    STDIN // < 
 };
 
 struct Token {
