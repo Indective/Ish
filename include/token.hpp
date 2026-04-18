@@ -6,6 +6,12 @@ enum class TokenType {
     Pipe,
     AndAnd,
     Ampersand,
+    STDOUT_APPEND, // >>
+    STDOUT_OVERWRITE, // >
+    STDIN_HEREDOC, // << 
+    STDIN_HERESTRING,// <<<
+    STDERR, // 2>
+    STDIN, // < 
     End
 };
 

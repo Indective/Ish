@@ -5,11 +5,12 @@
 #include <string>
 #include <array>
 #include <string_view>
+#include <map>
 
 class Lexer
 {
 private : 
-    static constexpr const std::array<std::string_view, 6> redirection_ops;
+    static const std::map<std::string, TokenType> redirection_ops;
 public :
     std::vector<Token> tokenize(const std::string& line);
 };

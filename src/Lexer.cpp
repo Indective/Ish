@@ -1,7 +1,17 @@
 #include "Lexer.hpp"
 #include <iostream>
+#include <array>
+#include <algorithm>
 
-const std::array<std::string_view, 6> Lexer::redirection_ops = {"<","<<","<<<",">",">>","2>"};
+const std::map<std::string, TokenType> Lexer::redirection_ops = 
+{
+    {">",TokenType::STDOUT_OVERWRITE},
+    {">>",TokenType::STDOUT_APPEND},
+    {"2>",TokenType::STDERR},
+    {"<",TokenType::STDIN},
+    {"<<",TokenType::STDIN_HEREDOC},
+    {"<<<",TokenType::STDIN_HERESTRING}
+};
 
 std::vector<Token> Lexer::tokenize(const std::string &line)
 {
@@ -84,6 +94,15 @@ std::vector<Token> Lexer::tokenize(const std::string &line)
     {
         token.type = TokenType::Word;
         tokens.push_back(token);
+    }
+    
+    for(size_t i = 0; i < tokens.size(); i++)
+    {
+        const auto it = redirection_ops.find(tokens[i].value);
+        if (it != redirection_ops.end())
+        {
+            tokens[i].type = it->second;
+        }
     }
 
     tokens.push_back({TokenType::End});
