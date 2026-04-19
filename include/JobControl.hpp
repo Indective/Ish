@@ -1,6 +1,6 @@
 #pragma once
 #include "CommandModel.hpp"
-#include "Executing.hpp"
+#include "Executor.hpp"
 #include <iostream>
 #include <vector>
 #include <unordered_map>
@@ -16,7 +16,7 @@ enum class JobStatus
     STOPPED
 };
 
-struct Job
+struct JobData
 {
     int id;
     std::vector<pid_t> pids;
@@ -27,7 +27,7 @@ struct Job
 namespace JobControl
 {
     extern int job_counter;
-    extern std::vector<Job> background_jobs;
+    extern std::vector<JobData> background_jobs;
 
     void sigchldHandler(int);
     void reap_finished_jobs();

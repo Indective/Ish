@@ -1,7 +1,10 @@
-#include "Parsing.hpp"
-#include "Executing.hpp"
+#include "Parser.hpp"
+#include "Lexer.hpp"
+#include "CommandModel.hpp"
+#include "Executor.hpp"
 #include "ShellContext.hpp"
 #include "JobControl.hpp"
+
 #include <readline/readline.h>
 #include <readline/history.h>
 #include <iostream>
@@ -13,12 +16,15 @@ int main()
 {
     ShellContext shell;
     ExecResult result = ExecResult::Continue;
+    Executor exec;
 
     shell.load_aliases();
     signal(SIGCHLD, JobControl::sigchldHandler);
 
     while(result != ExecResult::Exit)
     {   
+        Lexer lex;
+        Parser parse;
         const size_t MAX_BUFFER_LENGTH = 1024;
         char buffer[MAX_BUFFER_LENGTH]; // save the path
         const char* full_path = getcwd(buffer,MAX_BUFFER_LENGTH); 
@@ -30,12 +36,18 @@ int main()
             break;
         }
         
-        std::optional<PipeLine> p = CommandParsing::parse_command(input);  
-        
-        if(p)
+        std::optional<std::vector<Token>> tokens = lex.tokenize(input);
+        std::optional<Job> job = parse.Parse_Job(*tokens);
+        auto &pipelines = job->chain.pipelines;
+        for(auto &pipeline : pipelines)
         {
-            result = CommandExecuting::handle_execution(p);
+            for(auto &command : pipeline.commands)
+            {
+                shell.replace_alias(command);
+            }
         }
+        
+        result = exec.execute_job(*job);
 
         JobControl::reap_finished_jobs();
         

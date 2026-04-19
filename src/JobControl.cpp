@@ -4,7 +4,7 @@
 namespace JobControl
 {
     int job_counter = 0;
-    std::vector<Job> background_jobs;
+    std::vector<JobData> background_jobs;
 
     void sigchldHandler(int)
     {
@@ -42,7 +42,7 @@ namespace JobControl
 
                 for (const auto& command : job.commands)
                 {
-                    for(const auto &it : command.tokens)
+                    for(const auto &it : command.argv)
                     {
                         std::cout << it << " ";
                     }
@@ -52,7 +52,7 @@ namespace JobControl
             }
         }
 
-        std::erase_if(background_jobs, [](const Job& job)
+        std::erase_if(background_jobs, [](const JobData& job)
         {
             return job.status == JobStatus::DONE;
         });

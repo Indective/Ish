@@ -4,6 +4,7 @@
 #include <string.h>
 #include <fstream>
 #include <string>
+#include <readline/readline.h>
 #include <readline/history.h>
 #include <vector>
 #include <optional>
@@ -121,14 +122,14 @@ void ShellContext::load_aliases()
 
 void ShellContext::replace_alias(Command &cmd)
 {
-    for (size_t i = 0; i < cmd.tokens.size(); i++)
+    for (size_t i = 0; i < cmd.argv.size(); i++)
     {
-        auto it = aliases.find(cmd.tokens[i]);
+        auto it = aliases.find(cmd.argv[i]);
         if (it != aliases.end())
         {
-            cmd.tokens.erase(cmd.tokens.begin() + i);
+            cmd.argv.erase(cmd.argv.begin() + i);
             std::optional<std::vector<std::string>> alias_command = parse_line(it->second, false);
-            cmd.tokens.insert(cmd.tokens.begin() + i, alias_command->begin(), alias_command->end());
+            cmd.argv.insert(cmd.argv.begin() + i, alias_command->begin(), alias_command->end());
             i += alias_command->size();
         }
     }
