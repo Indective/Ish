@@ -20,6 +20,10 @@ ExecResult Executor::execute_chain(const AndChain& chain, const bool& is_backgro
     for(size_t i = 0; i < chain.pipelines.size(); i++)
     {
         result = execute_pipe(chain.pipelines[i], is_background);
+        if(result == ExecResult::Failed)
+        {
+            return result;
+        }
     }
 
     return result;
@@ -241,7 +245,12 @@ ExecResult Executor::execute_external_command(const Command& command, const bool
         }
         else
         {
-            waitpid(pid, nullptr, 0);
+            int status;
+            waitpid(pid, &status, 0);
+            if(WIFEXITED(status) && WEXITSTATUS(status) != 0)
+            {
+                return ExecResult::Failed;
+            }
             return ExecResult::Continue;
         }
     }

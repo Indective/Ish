@@ -10,6 +10,7 @@
 enum class ExecResult
 {
     Continue,
+    Failed,
     Exit
 };
 
