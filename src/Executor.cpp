@@ -13,6 +13,7 @@
 #include <iterator>
 #include <optional>
 
+
 ExecResult Executor::execute_chain(const AndChain& chain, const bool& is_background)
 {
     ExecResult result = ExecResult::Continue;
@@ -108,6 +109,15 @@ ExecResult Executor::execute_pipe(const Pipeline& p, const bool& is_background)
             }
             else if(pid == 0)
             {
+                if(i == 0)
+                {
+                    setpgid(0,0);
+                }
+                else
+                {
+                    setpgid(0, pgid);
+                }
+
                 if(i > 0)
                 {
                     dup2(pipes[i - 1][0], STDIN_FILENO);
@@ -144,12 +154,7 @@ ExecResult Executor::execute_pipe(const Pipeline& p, const bool& is_background)
                 {
                     pgid = pid;
                 }
-
-                if(setpgid(pid, pgid) == -1)
-                {
-                    perror("setpgid");
-                    return ExecResult::Continue;
-                }
+                setpgid(pid, pgid);
 
                 pids.push_back(pid);
 
