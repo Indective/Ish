@@ -38,19 +38,27 @@ int main()
         
         std::optional<std::vector<Token>> tokens = lex.tokenize(input);
         std::optional<Job> job = parse.Parse_Job(*tokens);
-        auto &pipelines = job->chain.pipelines;
-        for(auto &pipeline : pipelines)
+        if(job)
         {
-            for(auto &command : pipeline.commands)
+            auto &pipelines = job->chain.pipelines;
+            for(auto &pipeline : pipelines)
             {
-                shell.replace_alias(command);
+                for(auto &command : pipeline.commands)
+                {
+                    shell.replace_alias(command);
+                }
             }
+            
+            result = exec.execute_job(*job);   
         }
         
-        result = exec.execute_job(*job);
+        if(JobControl::child_changed)
+        {
+            JobControl::reap_finished_jobs();
+            JobControl::child_changed = 0;
+        }
 
-        JobControl::reap_finished_jobs();
-        
+        JobControl::print_finished_jobs();
     }
 
     return 0;

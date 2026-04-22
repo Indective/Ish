@@ -4,19 +4,27 @@
 namespace JobControl
 {
     int job_counter = 0;
+    volatile sig_atomic_t child_changed = 0;
     std::vector<JobData> background_jobs;
 
     void sigchldHandler(int)
     {
+        child_changed = 1;
+    }
+
+    void reap_finished_jobs()
+    {
         int status;
         pid_t pid;
 
-        // Reap all finished children
         while ((pid = waitpid(-1, &status, WNOHANG)) > 0)
         {
-            for (auto& job : background_jobs)
+            for (size_t i = 0; i < background_jobs.size(); i++)
             {
+                auto &job = background_jobs[i];
+
                 auto it = std::find(job.pids.begin(), job.pids.end(), pid);
+
                 if (it != job.pids.end())
                 {
                     job.pids.erase(it);
@@ -25,39 +33,42 @@ namespace JobControl
                     {
                         job.status = JobStatus::DONE;
                     }
+
                     break;
                 }
             }
         }
     }
 
-    void reap_finished_jobs()
+    void print_finished_jobs()
     {
-        for (const auto& job : background_jobs)
+        for (size_t i = 0; i < background_jobs.size(); )
         {
+            auto &job = background_jobs[i];
+
             if (job.status == JobStatus::DONE)
             {
-                rl_on_new_line();
-                std::cout << "[" << job.id << "]+" << "  done\t";
+                std::cout << "[" << job.id << "]+ done\t";
 
-                for (const auto& command : job.commands)
+                for (const auto &command : job.commands)
                 {
-                    for(const auto &it : command.argv)
+                    for (const auto &arg : command.argv)
                     {
-                        std::cout << it << " ";
+                        std::cout << arg << " ";
                     }
                 }
 
                 std::cout << std::endl;
+
+                background_jobs.erase(background_jobs.begin() + i);
+            }
+            else
+            {
+                ++i;
             }
         }
 
-        std::erase_if(background_jobs, [](const JobData& job)
-        {
-            return job.status == JobStatus::DONE;
-        });
-
-        if(background_jobs.empty())
+        if (background_jobs.empty())
         {
             job_counter = 0;
         }

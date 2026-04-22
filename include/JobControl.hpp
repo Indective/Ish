@@ -26,9 +26,11 @@ struct JobData
 
 namespace JobControl
 {
+    extern volatile sig_atomic_t child_changed;
     extern int job_counter;
     extern std::vector<JobData> background_jobs;
 
     void sigchldHandler(int);
     void reap_finished_jobs();
+    void print_finished_jobs();
 }
