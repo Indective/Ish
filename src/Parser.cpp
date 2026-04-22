@@ -56,7 +56,7 @@ std::optional<Pipeline> Parser::Parse_Pipeline(const std::vector<Token> &tokens)
         {
             if (current.empty())
             {
-                std::cerr << "Parsing error: expected command near '|'" << std::endl;
+                std::cerr << "Parsing error: expected command before '|'" << std::endl;
                 return std::nullopt;
             }
 
@@ -81,7 +81,9 @@ std::optional<Pipeline> Parser::Parse_Pipeline(const std::vector<Token> &tokens)
 
     auto command = Parse_Command(current);
     if (!command)
+    {
         return std::nullopt;
+    }
 
     p.commands.push_back(*command);
 
@@ -99,7 +101,7 @@ std::optional<AndChain> Parser::Parse_Chain(const std::vector<Token>& tokens)
         {
             if (current.empty())
             {
-                std::cerr << "Parsing error: expected command near '&&'\n";
+                std::cerr << "Parsing error: expected command before '&&' " << std::endl;
                 return std::nullopt;
             }
 
@@ -118,13 +120,15 @@ std::optional<AndChain> Parser::Parse_Chain(const std::vector<Token>& tokens)
 
     if (current.empty())
     {
-        std::cerr << "Parsing error: expected command after '&&'\n";
+        std::cerr << "Parsing error: expected command after '&&' " << std::endl;
         return std::nullopt;
     }
 
     auto pipe = Parse_Pipeline(current);
     if (!pipe)
+    {
         return std::nullopt;
+    }
 
     chain.pipelines.push_back(*pipe);
 
@@ -156,7 +160,6 @@ std::optional<Job> Parser::Parse_Job(const std::vector<Token>& tokens)
     {
         job.background = true;
         local_tokens.pop_back();
-        std::cout << "is_background" << std::endl;
     }
 
     auto chain = Parse_Chain(local_tokens);
