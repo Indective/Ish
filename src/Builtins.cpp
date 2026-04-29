@@ -1,14 +1,15 @@
 #include "Builtins.hpp"
+#include "ShellContext.hpp"
 #include <vector>
 
-ExecResult builtin_cd(const std::vector<std::string>& tokens)
+ExecResult builtin_cd(const std::vector<std::string>& argv)
 {
-    if(tokens.size() != 2)
+    if(argv.size() != 2)
     {
         return ExecResult::Continue;
     }
 
-    const char* dir_name = tokens[1].c_str();
+    const char* dir_name = argv[1].c_str();
 
     if(chdir(dir_name) == 0)
     {
@@ -20,7 +21,7 @@ ExecResult builtin_cd(const std::vector<std::string>& tokens)
     return ExecResult::Continue;
 }
 
-ExecResult builtin_exit(const std::vector<std::string>& tokens)
+ExecResult builtin_exit(const std::vector<std::string>& argv)
 {
     for(auto& it : JobControl::background_jobs)
     {
@@ -34,7 +35,7 @@ ExecResult builtin_exit(const std::vector<std::string>& tokens)
     return ExecResult::Exit;
 }
 
-ExecResult builtin_jobs(const std::vector<std::string>& tokens)
+ExecResult builtin_jobs(const std::vector<std::string>& argv)
 {
     for(auto& job : JobControl::background_jobs)
     {
@@ -56,5 +57,17 @@ ExecResult builtin_jobs(const std::vector<std::string>& tokens)
         }
     }
 
+    return ExecResult::Continue;
+}
+
+ExecResult builtin_source(const std::vector<std::string> & argv)
+{
+    ShellContext shell;
+    if(argv.size() != 2)
+    {
+        return ExecResult::Continue;
+    }
+
+    shell.reload_aliases(argv[1]);
     return ExecResult::Continue;
 }
