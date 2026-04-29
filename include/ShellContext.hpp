@@ -12,7 +12,7 @@ private:
     static constexpr const char* postfix = " $ ";
     static constexpr const char* blue = "\033[34m";
     static constexpr const char* reset = "\033[0m";
-    static constexpr const char* filename = ".aliases";
+    static constexpr const char* filename = "/.ish_aliases";
 
     std::string shorten_path(const std::string& path);
     std::optional<std::vector<std::string>> parse_line(const std::string& line, const bool& is_alias_line);
@@ -21,8 +21,10 @@ private:
 public:
     void load_aliases();
     void replace_alias(Command& cmd);
+    void reload_aliases(const std::string& path);
 
     std::string build_prompt(const std::string& path);
-    const char * get_input(const char * path) ;
+    const char * get_input(const char * path);
+    const char * get_full_path();
 };
 

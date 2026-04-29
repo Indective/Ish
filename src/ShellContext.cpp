@@ -1,13 +1,16 @@
 #include "ShellContext.hpp"
 #include "Parser.hpp"
+#include "JobControl.hpp"
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 #include <fstream>
 #include <string>
 #include <readline/readline.h>
 #include <readline/history.h>
 #include <vector>
 #include <optional>
+#include <filesystem>
 
 std::unordered_map<std::string, std::string> ShellContext::aliases;
 
@@ -88,7 +91,57 @@ bool ShellContext::check_syntax(const std::vector<std::string> &tokens, const bo
 void ShellContext::load_aliases()
 {
     std::string line;
-    std::ifstream inputFile(filename);
+    const char * home = getenv("HOME");
+
+    std::string aliases_path = std::string(home) + filename;
+    std::ifstream inputFile(aliases_path);
+    std::optional<std::vector<std::string>> tokens;
+    int invalid_line = 0; // get the index of the line with invalid syntax(if there are any)
+
+    if (inputFile.is_open()) 
+    {
+        while (std::getline(inputFile, line)) 
+        {
+            if(!line.empty())
+            {
+                invalid_line ++;
+                tokens = parse_line(line, true);
+                if(tokens)
+                {
+                    aliases[(*tokens)[1]] = (*tokens)[3];
+                }
+                else
+                {
+                    std::cerr << "Could not load aliases, Incorrect syntax at line : " << invalid_line << std::endl;
+                    return;
+                }
+            }
+        }
+        inputFile.close();
+    }
+}
+
+void ShellContext::replace_alias(Command &cmd)
+{
+    for (size_t i = 0; i < cmd.argv.size(); i++)
+    {
+        auto it = aliases.find(cmd.argv[i]);
+        if (it != aliases.end())
+        {
+            cmd.argv.erase(cmd.argv.begin() + i);
+            std::optional<std::vector<std::string>> alias_command = parse_line(it->second, false);
+            cmd.argv.insert(cmd.argv.begin() + i, alias_command->begin(), alias_command->end());
+            i += alias_command->size();
+        }
+    }
+}
+
+void ShellContext::reload_aliases(const std::string &path)
+{
+    aliases.clear(); // clear aliases to reload
+    
+    std::string line;
+    std::ifstream inputFile(path);
     std::optional<std::vector<std::string>> tokens;
     int invalid_line = 0; // get the index of the line with invalid syntax(if there are any)
 
@@ -113,26 +166,6 @@ void ShellContext::load_aliases()
         }
         inputFile.close();
     } 
-    else 
-    {
-        std::cerr << "Unable to load aliases, Error opening file :  .aliases" << std::endl;
-    }
-
-}
-
-void ShellContext::replace_alias(Command &cmd)
-{
-    for (size_t i = 0; i < cmd.argv.size(); i++)
-    {
-        auto it = aliases.find(cmd.argv[i]);
-        if (it != aliases.end())
-        {
-            cmd.argv.erase(cmd.argv.begin() + i);
-            std::optional<std::vector<std::string>> alias_command = parse_line(it->second, false);
-            cmd.argv.insert(cmd.argv.begin() + i, alias_command->begin(), alias_command->end());
-            i += alias_command->size();
-        }
-    }
 }
 
 std::string ShellContext::shorten_path(const std::string &path)
@@ -172,4 +205,11 @@ const char * ShellContext::get_input(const char * path)
     free(input);
     input = nullptr;
     return input;
+}
+
+const char *ShellContext::get_full_path()
+{
+    const size_t MAX_BUFFER_LENGTH = 1024;
+    char buffer[MAX_BUFFER_LENGTH]; // save the path
+    return getcwd(buffer,MAX_BUFFER_LENGTH); 
 }
