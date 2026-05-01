@@ -12,24 +12,44 @@
 #include <unistd.h>
 #include <optional>
 
+int rl_sigint_redisplay(void)
+{
+    if(JobControl::sigint)
+    {
+        JobControl::sigint = 0;
+        rl_replace_line(" ",0);
+        rl_on_new_line();
+        std::cout << "\n";
+        rl_redisplay();
+    } 
+    return 0;
+}
+
 int main()
 {
     ShellContext shell;
+    Lexer lex;
+    Parser parse;
     ExecResult result = ExecResult::Continue;
     Executor exec;
 
     shell.load_aliases();
-    signal(SIGCHLD, JobControl::sigchldHandler);
+    JobControl::install_sigint();
+    JobControl::install_sigchld();
+
+    rl_catch_signals = 0; // stop readline form catching signals
+    rl_signal_event_hook = rl_sigint_redisplay;
 
     while(result != ExecResult::Exit)
     {   
-        Lexer lex;
-        Parser parse;
-        const size_t MAX_BUFFER_LENGTH = 1024;
-        char buffer[MAX_BUFFER_LENGTH]; // save the path
-        const char* full_path = getcwd(buffer,MAX_BUFFER_LENGTH); 
 
-        const char * input = shell.get_input(shell.build_prompt(full_path).c_str());
+        const char * input = shell.get_input(shell.build_prompt(shell.get_full_path()).c_str());
+
+        if(JobControl::child_changed)
+        {
+            JobControl::child_changed = 0;
+            JobControl::reap_finished_jobs();
+        }
 
         if(!input) // avoid dangling pointers that the program tries to parse later on (causing core dumps)
         {
@@ -50,12 +70,6 @@ int main()
             }
             
             result = exec.execute_job(*job);   
-        }
-        
-        if(JobControl::child_changed)
-        {
-            JobControl::reap_finished_jobs();
-            JobControl::child_changed = 0;
         }
 
         JobControl::print_finished_jobs();
