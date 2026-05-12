@@ -3,6 +3,7 @@
 #include <unordered_map>
 #include <string>
 #include <optional>
+#include <unistd.h>
 
 class ShellContext
 {
@@ -19,6 +20,11 @@ private:
     bool check_syntax(const std::vector<std::string> &tokens, const bool &in_quote, const bool &found_quote, const std::string& line);
 
 public:
+    static pid_t shell_pid;
+
+    void install_sigchld();
+    void install_sigint();
+    void init_shell();
     void load_aliases();
     void replace_alias(Command& cmd);
     void reload_aliases(const std::string& path);

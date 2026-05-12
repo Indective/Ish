@@ -90,12 +90,11 @@ std::optional<std::vector<Token>> Lexer::tokenize(const std::string &line)
         if(c == '~')
         {
             token.value += getenv("HOME");
+            continue;
         }
 
-        else
-        {
-            token.value += c;
-        }
+        token.value += c;
+        
     }
 
     if (!token.value.empty())

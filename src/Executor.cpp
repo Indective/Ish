@@ -3,6 +3,7 @@
 #include "CommandModel.hpp"
 #include "Redirection.hpp"
 #include "Builtins.hpp"
+#include "ShellContext.hpp"
 
 #include <unistd.h>
 #include <sys/types.h>
@@ -12,6 +13,8 @@
 #include <algorithm>
 #include <iterator>
 #include <optional>
+#include <signal.h>
+#include <string.h>
 
 
 ExecResult Executor::execute_chain(const AndChain& chain, const bool& is_background)
@@ -39,6 +42,21 @@ void Executor::close_pipes(std::vector<std::array<int, 2>>& pipes)
     }
 }
 
+void Executor::restore_signal_handling()
+{
+    struct sigaction sa;
+    // clear struct to avoid garbage values
+    memset(&sa, 0, sizeof(sa));
+    
+    sa.sa_handler = SIG_DFL; 
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0;
+
+    // restore signals that the parent changed
+    sigaction(SIGINT, &sa, NULL);
+    sigaction(SIGCHLD, &sa, NULL);
+}
+
 ExecResult Executor::execute_job(const Job& job)
 {
     return execute_chain(job.chain, job.background);
@@ -61,13 +79,17 @@ ExecResult Executor::execute_builtin(const Command& cmd)
     return it->second(cmd.argv);
 }
 
-bool Executor::is_builtin(const std::vector<std::string>& tokens)
+bool Executor::is_builtin(const std::vector<std::string>& argv)
 {
-    return builtins.find(tokens[0]) != builtins.end();
+    return builtins.find(argv[0]) != builtins.end();
 }
 
 ExecResult Executor::execute_pipe(const Pipeline& p, const bool& is_background)
 {
+    pid_t pgid = 0;
+    ShellContext shell;
+    std::vector<std::array<int, 2>> pipes;
+
     if(p.commands.size() == 1)
     {
         if(is_builtin(p.commands[0].argv) && !is_background)
@@ -81,12 +103,11 @@ ExecResult Executor::execute_pipe(const Pipeline& p, const bool& is_background)
     }
     else
     {
-        std::vector<std::array<int, 2>> pipes;
         size_t cmd_count = p.commands.size();
-        pid_t pgid = 0;
-        std::vector<pid_t> pids;
+        std::vector<Process> processes;
 
-        pids.reserve(cmd_count);
+        processes.reserve(cmd_count);
+
         pipes.resize(cmd_count - 1);
 
         for(size_t i = 0; i < pipes.size(); i++)
@@ -98,6 +119,7 @@ ExecResult Executor::execute_pipe(const Pipeline& p, const bool& is_background)
             }
         }
 
+        // fork children
         for(size_t i = 0; i < cmd_count; i++)
         {
             pid_t pid = fork();
@@ -144,6 +166,7 @@ ExecResult Executor::execute_pipe(const Pipeline& p, const bool& is_background)
 
                 argv.push_back(nullptr);
 
+                restore_signal_handling();
                 execvp(argv[0], argv.data());
                 perror("execvp");
                 _exit(EXIT_FAILURE);
@@ -156,7 +179,7 @@ ExecResult Executor::execute_pipe(const Pipeline& p, const bool& is_background)
                 }
                 setpgid(pid, pgid);
 
-                pids.push_back(pid);
+                processes.push_back({pid, State::RUNNING});
 
                 if(i > 0)
                 {
@@ -170,21 +193,21 @@ ExecResult Executor::execute_pipe(const Pipeline& p, const bool& is_background)
             }
         }
 
+
+
+        
         if(is_background)
         {
-            JobControl::background_jobs.push_back(
-            {
-                ++JobControl::job_counter,
-                pids,
-                p.commands,
-                JobStatus::RUNNING
-            });
+            JobData job(++JobControl::job_counter, processes, p.commands);
+            
+            JobControl::background_jobs.push_back(job);
 
+            // Print job data 
             std::cout << "[" << JobControl::job_counter << "]";
 
-            for(auto& pid : pids)
+            for(auto& process : processes)
             {
-                std::cout << " " << pid;
+                std::cout << " " << process.pid;
             }
 
             std::cout << std::endl;
@@ -193,11 +216,25 @@ ExecResult Executor::execute_pipe(const Pipeline& p, const bool& is_background)
         }
         else
         {
-            for(pid_t pid : pids)
-            {
-                waitpid(pid, nullptr, 0);
-            }
+            JobData job(++JobControl::job_counter, processes, p.commands);
 
+            JobControl::foreground_jobs.push_back(job);
+
+            // give foreground group terminal control
+            tcsetpgrp(STDIN_FILENO, pgid);
+
+            // wait for children 
+            while(!job.is_done && !job.is_stopped)
+            {
+                int status;
+                pid_t pid =  waitpid(-pgid, &status, WUNTRACED);
+
+                JobControl::update_job_status(job, pid, status);
+            }
+            
+            // return control to shell 
+            tcsetpgrp(STDIN_FILENO, shell.shell_pid);
+            
             return ExecResult::Continue;
         }
     }
@@ -236,13 +273,9 @@ ExecResult Executor::execute_external_command(const Command& command, const bool
     {
         if(is_background)
         {
-            JobControl::background_jobs.push_back(
-            {
-                ++JobControl::job_counter,
-                {pid},
-                {command},
-                JobStatus::RUNNING
-            });
+            JobData job(++JobControl::job_counter, {{pid ,State::RUNNING}}, {command});
+
+            JobControl::background_jobs.push_back(job);
 
             std::cout << "[" << JobControl::job_counter << "] " << pid << std::endl;
 

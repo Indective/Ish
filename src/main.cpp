@@ -12,19 +12,6 @@
 #include <unistd.h>
 #include <optional>
 
-int rl_sigint_redisplay(void)
-{
-    if(JobControl::sigint)
-    {
-        JobControl::sigint = 0;
-        rl_replace_line(" ",0);
-        rl_on_new_line();
-        std::cout << "\n";
-        rl_redisplay();
-    } 
-    return 0;
-}
-
 int main()
 {
     ShellContext shell;
@@ -33,12 +20,7 @@ int main()
     ExecResult result = ExecResult::Continue;
     Executor exec;
 
-    shell.load_aliases();
-    JobControl::install_sigint();
-    JobControl::install_sigchld();
-
-    rl_catch_signals = 0; // stop readline form catching signals
-    rl_signal_event_hook = rl_sigint_redisplay;
+    shell.init_shell();
 
     while(result != ExecResult::Exit)
     {   
@@ -57,6 +39,12 @@ int main()
         }
         
         std::optional<std::vector<Token>> tokens = lex.tokenize(input);
+
+        if(!tokens)
+        {
+            continue;
+        }
+        
         std::optional<Job> job = parse.Parse_Job(*tokens);
         if(job)
         {
@@ -72,7 +60,6 @@ int main()
             result = exec.execute_job(*job);   
         }
 
-        JobControl::print_finished_jobs();
     }
 
     return 0;

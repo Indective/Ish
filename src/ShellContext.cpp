@@ -13,6 +13,7 @@
 #include <filesystem>
 
 std::unordered_map<std::string, std::string> ShellContext::aliases;
+pid_t ShellContext::shell_pid = 0;
 
 std::optional<std::vector<std::string>> ShellContext::parse_line(const std::string& line, const bool& is_alias_line)
 {
@@ -86,6 +87,23 @@ bool ShellContext::check_syntax(const std::vector<std::string> &tokens, const bo
         return false;
     }
     return true;
+}
+
+void ShellContext::init_shell()
+{
+    shell_pid = getpid();
+    setpgid(0, 0);
+
+    tcsetpgrp(STDIN_FILENO, shell_pid);
+    load_aliases();
+    JobControl::install_sigint();
+    JobControl::install_sigchld();
+    JobControl::install_sigstp();
+    JobControl::install_sigsttin();
+    JobControl::install_sigttou();
+
+    rl_catch_signals = 0; // stop readline form catching signals
+    rl_signal_event_hook = &JobControl::rl_sigint_redisplay;
 }
 
 void ShellContext::load_aliases()

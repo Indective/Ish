@@ -9,19 +9,26 @@
 #include <csignal>
 #include <signal.h>
 
-enum class JobStatus
+enum class State
 {
     RUNNING,
     DONE,
     STOPPED
 };
 
+struct Process
+{
+    pid_t pid;
+    State state;
+};
+
 struct JobData
 {
     int id;
-    std::vector<pid_t> pids;
+    std::vector<Process> processes;
     std::vector<Command> commands;
-    JobStatus status;
+    bool is_done = false;
+    bool is_stopped = false;
 };
 
 namespace JobControl
@@ -30,13 +37,16 @@ namespace JobControl
     extern volatile sig_atomic_t sigint;
     extern int job_counter;
     extern std::vector<JobData> background_jobs;
+    extern std::vector<JobData> foreground_jobs;
 
     void reap_finished_jobs();
-    void print_finished_jobs();
-
-    void sigintHandler(int);
-    void sigchldHandler(int);
+    void update_job_status(JobData &job, pid_t pid, int status);
 
     void install_sigchld();
     void install_sigint();
+    void install_sigttou();
+    void install_sigstp();
+    void install_sigsttin();
+
+    int rl_sigint_redisplay(void);
 }
