@@ -282,13 +282,23 @@ ExecResult Executor::execute_external_command(const Command& command, const bool
             return ExecResult::Continue;
         }
         else
-        {
+        {            
+            ShellContext shell;
+            JobData job(++JobControl::job_counter, {{pid ,State::RUNNING}}, {command});
+
+            JobControl::foreground_jobs.push_back(job);
+
+            // give foreground group terminal control
+            tcsetpgrp(STDIN_FILENO, pid);
+
             int status;
             waitpid(pid, &status, 0);
-            if(WIFEXITED(status) && WEXITSTATUS(status) != 0)
-            {
-                return ExecResult::Failed;
-            }
+
+            JobControl::update_job_status(job, pid, status);
+
+            // return control to shell 
+            tcsetpgrp(STDIN_FILENO, shell.shell_pid);
+
             return ExecResult::Continue;
         }
     }
