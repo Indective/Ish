@@ -4,6 +4,9 @@
 #include "Executor.hpp"
 #include "ShellContext.hpp"
 #include "JobControl.hpp"
+#include "UI.hpp"
+#include "AliasManager.hpp"
+#include "Signal.hpp"
 
 #include <readline/readline.h>
 #include <readline/history.h>
@@ -25,13 +28,15 @@ int main()
     while(result != ExecResult::Exit)
     {   
 
-        const char * input = shell.get_input(shell.build_prompt(shell.get_full_path()).c_str());
-
-        if(JobControl::child_changed)
+        if(Signal::sigchld)
         {
-            JobControl::child_changed = 0;
+            Signal::sigchld = 0;
+
+            //UI::CleanUI();
             JobControl::reap_finished_jobs();
         }
+
+        const char * input = UI::get_input(UI::build_prompt(UI::get_full_path()).c_str()); // do not touch this line becuase i do not get how is function
 
         if(!input) // avoid dangling pointers that the program tries to parse later on (causing core dumps)
         {
@@ -53,7 +58,7 @@ int main()
             {
                 for(auto &command : pipeline.commands)
                 {
-                    shell.replace_alias(command);
+                    AliasManager::replace_alias(command);
                 }
             }
             
@@ -64,4 +69,3 @@ int main()
 
     return 0;
 }
-

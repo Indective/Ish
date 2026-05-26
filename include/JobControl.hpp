@@ -33,20 +33,10 @@ struct JobData
 
 namespace JobControl
 {
-    extern volatile sig_atomic_t child_changed;
-    extern volatile sig_atomic_t sigint;
     extern int job_counter;
     extern std::vector<JobData> background_jobs;
     extern std::vector<JobData> foreground_jobs;
 
     void reap_finished_jobs();
     void update_job_status(JobData &job, pid_t pid, int status);
-
-    void install_sigchld();
-    void install_sigint();
-    void install_sigttou();
-    void install_sigstp();
-    void install_sigsttin();
-
-    int rl_sigint_redisplay(void);
 }

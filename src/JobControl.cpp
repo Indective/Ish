@@ -1,4 +1,6 @@
 #include "JobControl.hpp"
+#include "Signal.hpp"
+
 #include <algorithm>
 #include <unistd.h>
 #include <signal.h>
@@ -6,8 +8,6 @@
 namespace JobControl
 {
     int job_counter = 0;
-    volatile sig_atomic_t child_changed = 0;
-    volatile sig_atomic_t sigint = 0;
     std::vector<JobData> background_jobs;
     std::vector<JobData> foreground_jobs;
 
@@ -39,16 +39,6 @@ namespace JobControl
         }
 
         return nullptr;
-    }
-
-    void sigchldHandler(int)
-    {
-        child_changed = 1;
-    }
-
-    void sigintHandler(int)
-    {
-        sigint = 1;
     }
 
     void print_finished_jobs()
@@ -146,67 +136,4 @@ namespace JobControl
         job.is_stopped = is_all_stopped && !is_all_done;
     }
 
-    void install_sigchld()
-    {
-        struct sigaction sa{};
-        sa.sa_handler = sigchldHandler;
-        sigemptyset(&sa.sa_mask);
-        sa.sa_flags = SA_RESTART | SA_NOCLDSTOP;
-
-        sigaction(SIGCHLD, &sa, nullptr);
-    }
-
-    void install_sigint()
-    {
-        struct sigaction sa{};
-        sa.sa_handler = sigintHandler;
-        sigemptyset(&sa.sa_mask);
-        sa.sa_flags = 0;
-
-        sigaction(SIGINT, &sa, nullptr);
-    }
-
-    void install_sigttou()
-    {
-        struct sigaction sa{};
-        sa.sa_handler = SIG_IGN;
-        sigemptyset(&sa.sa_mask);
-        sa.sa_flags = 0;
-
-        sigaction(SIGTTOU, &sa, nullptr);
-    }
-
-    void install_sigstp()
-    {
-        struct sigaction sa{};
-        sa.sa_handler = SIG_IGN;
-        sigemptyset(&sa.sa_mask);
-        sa.sa_flags = 0;
-
-        sigaction(SIGTSTP, &sa, nullptr);
-    }
-
-    void install_sigsttin()
-    {
-        struct sigaction sa{};
-        sa.sa_handler = SIG_IGN;
-        sigemptyset(&sa.sa_mask);
-        sa.sa_flags = 0;
-
-        sigaction(SIGTTIN, &sa, nullptr);
-    }
-
-    int rl_sigint_redisplay(void)
-    {
-        if(JobControl::sigint)
-        {
-            JobControl::sigint = 0;
-            rl_replace_line(" ",0);
-            rl_on_new_line();
-            std::cout << "\n";
-            rl_redisplay();
-        } 
-        
-        return 0;
-    }
 }

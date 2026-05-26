@@ -253,6 +253,8 @@ ExecResult Executor::execute_external_command(const Command& command, const bool
     }
     else if(pid == 0)
     {
+        setpgid(0,0);
+
         for(auto& arg : command.argv)
         {
             argv.push_back(const_cast<char*>(arg.c_str()));

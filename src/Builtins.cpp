@@ -1,5 +1,7 @@
 #include "Builtins.hpp"
 #include "ShellContext.hpp"
+#include "AliasManager.hpp"
+
 #include <vector>
 
 ExecResult builtin_cd(const std::vector<std::string>& argv)
@@ -73,6 +75,6 @@ ExecResult builtin_source(const std::vector<std::string> & argv)
         return ExecResult::Continue;
     }
 
-    shell.reload_aliases(argv[1]);
+    AliasManager::reload_aliases(argv[1]);
     return ExecResult::Continue;
 }
