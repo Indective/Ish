@@ -1,6 +1,5 @@
 #pragma once
-#include "token.hpp"
-#include "CommandModel.hpp"
+#include "Types.hpp"
 #include <vector>
 #include <optional>
 

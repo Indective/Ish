@@ -1,6 +1,6 @@
 #include "Parser.hpp"
 #include "Lexer.hpp"
-#include "CommandModel.hpp"
+#include "Types.hpp"
 #include "Executor.hpp"
 #include "ShellContext.hpp"
 #include "JobControl.hpp"

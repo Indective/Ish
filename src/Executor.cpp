@@ -1,6 +1,6 @@
 #include "Executor.hpp"
 #include "Parser.hpp"
-#include "CommandModel.hpp"
+#include "Types.hpp"
 #include "Redirection.hpp"
 #include "Builtins.hpp"
 #include "ShellContext.hpp"
@@ -45,6 +45,7 @@ void Executor::close_pipes(std::vector<std::array<int, 2>>& pipes)
 void Executor::restore_signal_handling()
 {
     struct sigaction sa;
+
     // clear struct to avoid garbage values
     memset(&sa, 0, sizeof(sa));
     
@@ -55,6 +56,9 @@ void Executor::restore_signal_handling()
     // restore signals that the parent changed
     sigaction(SIGINT, &sa, NULL);
     sigaction(SIGCHLD, &sa, NULL);
+    sigaction(SIGTSTP, &sa, NULL);
+    sigaction(SIGTTOU, &sa, NULL);
+    sigaction(SIGTTIN, &sa, NULL);
 }
 
 ExecResult Executor::execute_job(const Job& job)
@@ -89,6 +93,7 @@ ExecResult Executor::execute_pipe(const Pipeline& p, const bool& is_background)
     pid_t pgid = 0;
     ShellContext shell;
     std::vector<std::array<int, 2>> pipes;
+    ExecResult result;
 
     if(p.commands.size() == 1)
     {
@@ -167,17 +172,18 @@ ExecResult Executor::execute_pipe(const Pipeline& p, const bool& is_background)
                 argv.push_back(nullptr);
 
                 restore_signal_handling();
+
                 execvp(argv[0], argv.data());
                 perror("execvp");
                 _exit(EXIT_FAILURE);
             }
             else
             {
+                // do NOT use setpgid here
                 if(i == 0)
                 {
                     pgid = pid;
                 }
-                setpgid(pid, pgid);
 
                 processes.push_back({pid, State::RUNNING});
 
@@ -212,7 +218,7 @@ ExecResult Executor::execute_pipe(const Pipeline& p, const bool& is_background)
 
             std::cout << std::endl;
 
-            return ExecResult::Continue;
+            return result;
         }
         else
         {
@@ -229,21 +235,24 @@ ExecResult Executor::execute_pipe(const Pipeline& p, const bool& is_background)
                 int status;
                 pid_t pid =  waitpid(-pgid, &status, WUNTRACED);
 
-                JobControl::update_job_status(job, pid, status);
+                JobControl::update_job_status(job, pid, status, result);
             }
             
             // return control to shell 
             tcsetpgrp(STDIN_FILENO, shell.shell_pid);
             
-            return ExecResult::Continue;
+            return result;
         }
     }
 }
 
+
+
+
 ExecResult Executor::execute_external_command(const Command& command, const bool& is_background)
 {
     std::vector<char*> argv;
-
+    ExecResult result = ExecResult::Continue;
     pid_t pid = fork();
 
     if(pid == -1)
@@ -267,6 +276,8 @@ ExecResult Executor::execute_external_command(const Command& command, const bool
             redircetion_handler[op](fn);
         }
 
+        restore_signal_handling();
+
         execvp(argv[0], argv.data());
         perror("ish");
         _exit(EXIT_FAILURE);
@@ -281,7 +292,7 @@ ExecResult Executor::execute_external_command(const Command& command, const bool
 
             std::cout << "[" << JobControl::job_counter << "] " << pid << std::endl;
 
-            return ExecResult::Continue;
+            return result;
         }
         else
         {            
@@ -296,12 +307,12 @@ ExecResult Executor::execute_external_command(const Command& command, const bool
             int status;
             waitpid(pid, &status, 0);
 
-            JobControl::update_job_status(job, pid, status);
+            JobControl::update_job_status(job, pid, status, result);
 
             // return control to shell 
             tcsetpgrp(STDIN_FILENO, shell.shell_pid);
 
-            return ExecResult::Continue;
+            return result;
         }
     }
 }

@@ -1,18 +1,11 @@
 #pragma once
-#include "CommandModel.hpp"
+#include "Types.hpp"
 #include "JobControl.hpp"
 #include <iostream>
 #include <vector>
 #include <unordered_map>
 #include <array>
 #include <optional>
-
-enum class ExecResult
-{
-    Continue,
-    Failed,
-    Exit
-};
 
 class Executor
 {

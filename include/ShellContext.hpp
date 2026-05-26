@@ -1,5 +1,5 @@
 #pragma once
-#include "CommandModel.hpp"
+#include "Types.hpp"
 #include <unordered_map>
 #include <string>
 #include <optional>

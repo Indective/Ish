@@ -1,5 +1,6 @@
 #include "JobControl.hpp"
 #include "Signal.hpp"
+#include "Executor.hpp"
 
 #include <algorithm>
 #include <unistd.h>
@@ -87,20 +88,36 @@ namespace JobControl
 
             if(job)
             {
-                update_job_status(*job, pid, status);
+                ExecResult result = ExecResult::Continue;
+                update_job_status(*job, pid, status, result);
             }
         }
 
         print_finished_jobs();
     }
 
-    void update_job_status(JobData& job, pid_t pid, int status)
+    void update_job_status(JobData& job, pid_t pid, int status, ExecResult &result)
     {
         Process* proc = find_process(pid, job);
 
         if(proc)
         {
-            if(WIFEXITED(status) || WIFSIGNALED(status))
+            if(WIFEXITED(status))
+            {
+                int code = WEXITSTATUS(status);
+
+                if(code == 0)
+                {
+                    proc->state = State::DONE;
+                }
+                else
+                {
+                    proc->state = State::FAILED;
+                    result = ExecResult::Failed;
+                }
+                
+            }
+            else if(WIFSIGNALED(status))
             {
                 proc->state = State::DONE;
             }

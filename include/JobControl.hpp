@@ -1,5 +1,5 @@
 #pragma once
-#include "CommandModel.hpp"
+#include "Types.hpp"
 #include "Executor.hpp"
 #include <iostream>
 #include <vector>
@@ -9,28 +9,6 @@
 #include <csignal>
 #include <signal.h>
 
-enum class State
-{
-    RUNNING,
-    DONE,
-    STOPPED
-};
-
-struct Process
-{
-    pid_t pid;
-    State state;
-};
-
-struct JobData
-{
-    int id;
-    std::vector<Process> processes;
-    std::vector<Command> commands;
-    bool is_done = false;
-    bool is_stopped = false;
-};
-
 namespace JobControl
 {
     extern int job_counter;
@@ -38,5 +16,5 @@ namespace JobControl
     extern std::vector<JobData> foreground_jobs;
 
     void reap_finished_jobs();
-    void update_job_status(JobData &job, pid_t pid, int status);
+    void update_job_status(JobData& job, pid_t pid, int status, ExecResult &result);
 }
