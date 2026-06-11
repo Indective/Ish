@@ -6,25 +6,6 @@
 #include <vector>
 #include <optional>
 
-enum class AliasTokenType
-{
-    Word,
-    EqualSign,
-    Value
-};
-
-struct AliasToken
-{
-    AliasTokenType type;
-    std::string value;
-};
-
-struct Alias
-{
-    std::string name;
-    std::string value;
-};
-
 namespace AliasManager
 {
     static constexpr const char* filename = "/.ish_aliases";

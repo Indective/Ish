@@ -6,16 +6,10 @@
 namespace Signal
 {
     volatile sig_atomic_t sigchld = 0;
-    volatile sig_atomic_t sigint = 0;
 
     void sigchldHandler(int)
     {
         sigchld = 1;
-    }
-
-    void sigintHandler(int)
-    {
-        sigint = 1;
     }
     
     void install_sigchld()
@@ -23,7 +17,7 @@ namespace Signal
         struct sigaction sa{};
         sa.sa_handler = sigchldHandler;
         sigemptyset(&sa.sa_mask);
-        sa.sa_flags = SA_RESTART | SA_NOCLDSTOP;
+        sa.sa_flags = SA_RESTART;
 
         sigaction(SIGCHLD, &sa, nullptr);
     }
@@ -31,7 +25,7 @@ namespace Signal
     void install_sigint()
     {
         struct sigaction sa{};
-        sa.sa_handler = sigintHandler;
+        sa.sa_handler = SIG_IGN;
         sigemptyset(&sa.sa_mask);
         sa.sa_flags = 0;
 

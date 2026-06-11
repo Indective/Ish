@@ -4,6 +4,7 @@
 #include "Redirection.hpp"
 #include "Builtins.hpp"
 #include "ShellContext.hpp"
+#include "Signal.hpp"
 
 #include <unistd.h>
 #include <sys/types.h>
@@ -15,7 +16,7 @@
 #include <optional>
 #include <signal.h>
 #include <string.h>
-
+#include <errno.h>
 
 ExecResult Executor::execute_chain(const AndChain& chain, const bool& is_background)
 {
@@ -24,7 +25,7 @@ ExecResult Executor::execute_chain(const AndChain& chain, const bool& is_backgro
     for(size_t i = 0; i < chain.pipelines.size(); i++)
     {
         result = execute_pipe(chain.pipelines[i], is_background);
-        if(result == ExecResult::Failed)
+        if(result != ExecResult::Continue)
         {
             return result;
         }
@@ -59,6 +60,44 @@ void Executor::restore_signal_handling()
     sigaction(SIGTSTP, &sa, NULL);
     sigaction(SIGTTOU, &sa, NULL);
     sigaction(SIGTTIN, &sa, NULL);
+    sigaction(SIGCHLD, &sa, NULL);
+}
+
+ExecResult Executor::wait_job(std::list<JobData>::iterator &job_it, const sigset_t &oldmask)
+{
+    sigset_t suspend_mask = oldmask;
+    sigdelset(&suspend_mask, SIGCHLD);
+
+    std::cerr << "SHELL PGID: " << getpgrp()
+            << " FG: " << tcgetpgrp(STDIN_FILENO)
+            << std::endl;
+
+    ExecResult res = ExecResult::Continue;
+    
+    while (!JobControl::is_stopped(*job_it) && !JobControl::is_done(*job_it))
+    {
+        sigsuspend(&suspend_mask);
+
+        JobControl::reap_finished_jobs();
+    }
+
+    if(JobControl::is_stopped(*job_it))
+    {
+        res = ExecResult::Stopped;
+    }
+    else if (JobControl::is_done(*job_it))
+    {
+        res = ExecResult::Continue;
+    }
+    else if(!JobControl::succeeded(*job_it))
+    {
+        std::cout << "sucedada" << std::endl;
+        res = ExecResult::Failed;
+    }
+
+    JobControl::handle_done_jobs();
+
+    return res;
 }
 
 ExecResult Executor::execute_job(const Job& job)
@@ -90,10 +129,16 @@ bool Executor::is_builtin(const std::vector<std::string>& argv)
 
 ExecResult Executor::execute_pipe(const Pipeline& p, const bool& is_background)
 {
+    sigset_t mask, oldmask;
+    sigemptyset(&mask);
+    sigaddset(&mask, SIGCHLD);
+
+    sigprocmask(SIG_BLOCK, &mask, &oldmask);
+
     pid_t pgid = 0;
     ShellContext shell;
     std::vector<std::array<int, 2>> pipes;
-    ExecResult result;
+    ExecResult result = ExecResult::Continue;
 
     if(p.commands.size() == 1)
     {
@@ -140,10 +185,6 @@ ExecResult Executor::execute_pipe(const Pipeline& p, const bool& is_background)
                 {
                     setpgid(0,0);
                 }
-                else
-                {
-                    setpgid(0, pgid);
-                }
 
                 if(i > 0)
                 {
@@ -179,13 +220,13 @@ ExecResult Executor::execute_pipe(const Pipeline& p, const bool& is_background)
             }
             else
             {
-                // do NOT use setpgid here
                 if(i == 0)
                 {
                     pgid = pid;
                 }
+                setpgid(pid, pgid);
 
-                processes.push_back({pid, State::RUNNING});
+                processes.push_back({pid, pgid,ProcessState::RUNNING});
 
                 if(i > 0)
                 {
@@ -200,14 +241,17 @@ ExecResult Executor::execute_pipe(const Pipeline& p, const bool& is_background)
         }
 
 
-
-        
         if(is_background)
         {
-            JobData job(++JobControl::job_counter, processes, p.commands);
+            JobData job(++JobControl::job_counter, processes, p.commands, JobState::RUNNING, JobMode::BACKGRROUND);
             
-            JobControl::background_jobs.push_back(job);
+            auto job_it = JobControl::jobs.emplace(JobControl::jobs.end(), job);
 
+            for(auto &process : processes)
+            {
+                JobControl::pid_to_job[process.pid] = job_it;
+            }
+         
             // Print job data 
             std::cout << "[" << JobControl::job_counter << "]";
 
@@ -222,23 +266,22 @@ ExecResult Executor::execute_pipe(const Pipeline& p, const bool& is_background)
         }
         else
         {
-            JobData job(++JobControl::job_counter, processes, p.commands);
+            JobData job(-1, processes, p.commands, JobState::RUNNING, JobMode::FOREGROUND);
 
-            JobControl::foreground_jobs.push_back(job);
+            auto job_it = JobControl::jobs.emplace(JobControl::jobs.end(), job);
 
-            // give foreground group terminal control
+            // assign all pids to the same job iterator
+            for(auto &process : processes)
+            {
+                JobControl::pid_to_job[process.pid] = job_it;
+            }
+
+            // give control to terminal foreground group
             tcsetpgrp(STDIN_FILENO, pgid);
 
-            // wait for children 
-            while(!job.is_done && !job.is_stopped)
-            {
-                int status;
-                pid_t pid =  waitpid(-pgid, &status, WUNTRACED);
+            ExecResult result = wait_job(job_it, oldmask);
 
-                JobControl::update_job_status(job, pid, status, result);
-            }
-            
-            // return control to shell 
+            // hand control back to shell
             tcsetpgrp(STDIN_FILENO, shell.shell_pid);
             
             return result;
@@ -251,8 +294,15 @@ ExecResult Executor::execute_pipe(const Pipeline& p, const bool& is_background)
 
 ExecResult Executor::execute_external_command(const Command& command, const bool& is_background)
 {
+    sigset_t mask, oldmask;
+    sigemptyset(&mask);
+    sigaddset(&mask, SIGCHLD);
+
+    sigprocmask(SIG_BLOCK, &mask, &oldmask);
+
     std::vector<char*> argv;
     ExecResult result = ExecResult::Continue;
+
     pid_t pid = fork();
 
     if(pid == -1)
@@ -286,31 +336,33 @@ ExecResult Executor::execute_external_command(const Command& command, const bool
     {
         if(is_background)
         {
-            JobData job(++JobControl::job_counter, {{pid ,State::RUNNING}}, {command});
+            JobData job(++JobControl::job_counter, {{pid, pid,ProcessState::RUNNING}}, {command}, JobState::RUNNING, JobMode::BACKGRROUND);
 
-            JobControl::background_jobs.push_back(job);
+            auto job_it = JobControl::jobs.emplace(JobControl::jobs.end(), job);
+
+            JobControl::pid_to_job[pid] = job_it;
 
             std::cout << "[" << JobControl::job_counter << "] " << pid << std::endl;
+
+            sigprocmask(SIG_SETMASK, &oldmask, nullptr);
 
             return result;
         }
         else
         {            
             ShellContext shell;
-            JobData job(++JobControl::job_counter, {{pid ,State::RUNNING}}, {command});
+            JobData job(-1, {{pid, pid ,ProcessState::RUNNING}}, {command}, JobState::RUNNING, JobMode::FOREGROUND);
+            
+            auto job_it = JobControl::jobs.emplace(JobControl::jobs.end(), job);
 
-            JobControl::foreground_jobs.push_back(job);
+            JobControl::pid_to_job[pid] = job_it;
 
-            // give foreground group terminal control
-            tcsetpgrp(STDIN_FILENO, pid);
+            setpgid(pid, pid);
+            tcsetpgrp(STDIN_FILENO, pid);     // give terminal
 
-            int status;
-            waitpid(pid, &status, 0);
+            result = wait_job(job_it, oldmask);
 
-            JobControl::update_job_status(job, pid, status, result);
-
-            // return control to shell 
-            tcsetpgrp(STDIN_FILENO, shell.shell_pid);
+            tcsetpgrp(STDIN_FILENO, shell.shell_pid); // take terminal
 
             return result;
         }

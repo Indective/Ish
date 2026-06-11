@@ -25,14 +25,14 @@ ExecResult builtin_cd(const std::vector<std::string>& argv)
 
 ExecResult builtin_exit(const std::vector<std::string>& argv)
 {
-    for(auto& job : JobControl::background_jobs)
+    for(auto& job : JobControl::jobs)
     {
-        if(!job.is_done)
+        if(!JobControl::is_done(job))
         {
             std::cout << "Cannot exit, Background processes running" << std::endl;
             return ExecResult::Continue;
         }
-        if(!job.is_stopped)
+        if(!JobControl::is_stopped(job))
         {
             std::cout << "Cannot exit, Background processes stopped" << std::endl;
             return ExecResult::Continue;      
@@ -44,14 +44,23 @@ ExecResult builtin_exit(const std::vector<std::string>& argv)
 
 ExecResult builtin_jobs(const std::vector<std::string>& argv)
 {
-    for(auto& job : JobControl::background_jobs)
+    for(auto& job : JobControl::jobs)
     {
-        if(!job.is_done)
+        if(!JobControl::is_done(job))
         {
             rl_on_new_line();
 
             std::cout << "[" << job.id << "]";
 
+            if(JobControl::is_stopped(job))
+            {
+                std::cout << "\tstopped\t";
+            }
+            else
+            {
+                std::cout << "\trunning\t";
+            }
+            
             for(auto& command : job.commands)
             {
                 for(auto& arg : command.argv)

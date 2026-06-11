@@ -9,6 +9,7 @@ enum class ExecResult
 {
     Continue,
     Failed,
+    Stopped,
     Exit
 };
 
@@ -89,7 +90,7 @@ struct Job
 
 
 // job control types
-enum class State
+enum class ProcessState
 {
     RUNNING,
     DONE,
@@ -97,10 +98,24 @@ enum class State
     FAILED
 };
 
+enum class JobMode
+{
+    FOREGROUND,
+    BACKGRROUND
+};
+
+enum class JobState
+{
+    RUNNING,
+    STOPPED,
+    DONE
+};
+
 struct Process
 {
     pid_t pid;
-    State state;
+    pid_t pgid;
+    ProcessState state;
 };
 
 struct JobData
@@ -108,6 +123,34 @@ struct JobData
     int id;
     std::vector<Process> processes;
     std::vector<Command> commands;
-    bool is_done = false;
-    bool is_stopped = false;
+    JobState state;
+    JobMode mode;
+    int exit_code = 0;
+
+    bool operator==(const JobData& other) const 
+    {
+        return id == other.id;
+    }
+};
+
+
+// alias types 
+
+enum class AliasTokenType
+{
+    Word,
+    EqualSign,
+    Value
+};
+
+struct AliasToken
+{
+    AliasTokenType type;
+    std::string value;
+};
+
+struct Alias
+{
+    std::string name;
+    std::string value;
 };

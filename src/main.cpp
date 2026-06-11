@@ -27,15 +27,6 @@ int main()
 
     while(result != ExecResult::Exit)
     {   
-
-        if(Signal::sigchld)
-        {
-            Signal::sigchld = 0;
-
-            //UI::CleanUI();
-            JobControl::reap_finished_jobs();
-        }
-
         const char * input = UI::get_input(UI::build_prompt(UI::get_full_path()).c_str()); // do not touch this line becuase i do not get how is function
 
         if(!input) // avoid dangling pointers that the program tries to parse later on (causing core dumps)
@@ -51,6 +42,7 @@ int main()
         }
         
         std::optional<Job> job = parse.Parse_Job(*tokens);
+        
         if(job)
         {
             auto &pipelines = job->chain.pipelines;
