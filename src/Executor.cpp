@@ -72,6 +72,7 @@ ExecResult Executor::wait_job(std::list<JobData>::iterator &job_it, const sigset
             << " FG: " << tcgetpgrp(STDIN_FILENO)
             << std::endl;
 
+
     ExecResult res = ExecResult::Continue;
     
     while (!JobControl::is_stopped(*job_it) && !JobControl::is_done(*job_it))
@@ -85,13 +86,9 @@ ExecResult Executor::wait_job(std::list<JobData>::iterator &job_it, const sigset
     {
         res = ExecResult::Stopped;
     }
-    else if (JobControl::is_done(*job_it))
-    {
-        res = ExecResult::Continue;
-    }
+
     else if(!JobControl::succeeded(*job_it))
     {
-        std::cout << "sucedada" << std::endl;
         res = ExecResult::Failed;
     }
 
@@ -344,7 +341,7 @@ ExecResult Executor::execute_external_command(const Command& command, const bool
 
             std::cout << "[" << JobControl::job_counter << "] " << pid << std::endl;
 
-            sigprocmask(SIG_SETMASK, &oldmask, nullptr);
+            sigprocmask(SIG_SETMASK, &oldmask, nullptr); // unblock
 
             return result;
         }
