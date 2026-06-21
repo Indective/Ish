@@ -135,8 +135,6 @@ namespace JobControl
 
         while ((pid = waitpid(-1, &status, WNOHANG | WUNTRACED | WCONTINUED)) > 0)
         {
-            std::cerr << "got pid = " << pid << std::endl;
-
             auto it = pid_to_job.find(pid);
 
             if(it == pid_to_job.end())
@@ -160,34 +158,43 @@ namespace JobControl
 
         for(auto job = jobs.begin(); job != jobs.end();)
         {
-            std::cout << "iteration" << std::endl;
             if(is_done(*job))
             {
                 if(is_background(*job))
                 {
                     notif_done_job(*job);
                 }
+                
+                //erase all pids pointing to the done process
+                for (auto& proc : job->processes)
+                {
+                    pid_to_job.erase(proc.pid);
+                }
 
                 job = jobs.erase(job);
+
             }
             else if(is_stopped(*job))
             {
-                std::cout << "job is stopped" << std::endl;
                 if(job->id == -1)
                 {
-                    std::cout << "incrementing" << std::endl;
-                    job->id = job_counter++;
+                    job->id = ++job_counter;
                 }
-
-                std::cout << "returning control to shell" << std::endl;
-
-                std::cout << "shell owner  : " << tcgetpgrp(STDIN_FILENO) << std::endl;
 
                 std::cout << std::endl;
                 tcsetpgrp(STDIN_FILENO, shell.shell_pid);
 
                 ++job;
             }
+            else
+            {
+                ++job;
+            }
+        }
+
+        if(jobs.empty())
+        {
+            job_counter = 0;
         }
     }
 
@@ -225,7 +232,7 @@ namespace JobControl
         }
 
         job.exit_code = exit_code;
-        std::cout << "job exit code : " << job.exit_code << std::endl;
+        
     }
     
 }

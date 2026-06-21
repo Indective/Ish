@@ -31,6 +31,8 @@ void ShellContext::init_shell()
     tcsetpgrp(STDIN_FILENO, shell_pid);
     AliasManager::load_aliases();
 
-    rl_catch_signals = 0; // stop readline form catching signals
+    // stop readline form catching signals
+    rl_catch_signals = 0; 
+    rl_catch_sigwinch = 0;
 }
 

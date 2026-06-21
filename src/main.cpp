@@ -27,6 +27,7 @@ int main()
 
     while(result != ExecResult::Exit)
     {   
+
         const char * input = UI::get_input(UI::build_prompt(UI::get_full_path()).c_str()); // do not touch this line becuase i do not get how is function
 
         if(!input) // avoid dangling pointers that the program tries to parse later on (causing core dumps)
