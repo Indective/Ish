@@ -17,6 +17,7 @@
 #include <signal.h>
 #include <string.h>
 #include <errno.h>
+#include <iterator>
 
 ExecResult Executor::execute_chain(const AndChain& chain, const bool& is_background)
 {
@@ -108,24 +109,83 @@ ExecResult Executor::execute_job(const Job& job)
 
 ExecResult Executor::execute_builtin(const Command& cmd)
 {
+    ExecResult result = ExecResult::Continue;
+
     for(auto& [op, fn] : cmd.redirections)
     {
         redircetion_handler[op](fn);
     }
 
-    auto it = builtins.find(cmd.argv[0]);
+    auto it_exec = builtins_exec.find(cmd.argv[0]);
 
-    if(it == builtins.end())
+    if(it_exec == builtins_exec.end())
     {
-        return ExecResult::Continue;
+        auto it_jobcontrol = builtins_jobcontrol.find(cmd.argv[0]);
+
+        if(it_jobcontrol != builtins_jobcontrol.end()) // command found
+        {
+            if(cmd.argv.size() == 2)
+            {
+                // parse job id
+                int index;
+
+                try 
+                {
+                    index = std::stoi(cmd.argv[1]);
+                }
+                catch (const std::invalid_argument& e) 
+                {
+                    std::cerr << "Error: Invalid numeric format.\n";
+                    return ExecResult::Continue;
+                } 
+                catch (const std::out_of_range& e) 
+                {
+                    std::cerr << "Error: Number out of int range.\n";
+                    return ExecResult::Continue;
+                }
+
+
+                auto job = std::find_if
+                (
+                    JobControl::jobs.begin(),
+                    JobControl::jobs.end(),
+                    [&](const JobData& j) { return j.id == index; }
+                );
+
+                if(job != JobControl::jobs.end())
+                {
+                    result = it_jobcontrol->second(job);
+                }
+                else
+                {
+                    rl_on_new_line();
+
+                    std::cout << "Error : Job id out of bounds.";
+                    
+                    std::cout << std::endl;
+
+                    return ExecResult::Continue;
+                }
+
+            }
+            else
+            {
+                result = ExecResult::Continue;
+            }
+        }
     }
 
-    return it->second(cmd.argv);
+    else // command found 
+    {
+        result = it_exec->second(cmd.argv);
+    }
+
+    return result;
 }
 
 bool Executor::is_builtin(const std::vector<std::string>& argv)
 {
-    return builtins.find(argv[0]) != builtins.end();
+    return (builtins_exec.find(argv[0]) != builtins_exec.end()) || (builtins_jobcontrol.find(argv[0]) != builtins_jobcontrol.end());
 }
 
 ExecResult Executor::execute_pipe(const Pipeline& p, const bool& is_background)

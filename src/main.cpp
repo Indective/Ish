@@ -26,7 +26,7 @@ int main()
     shell.init_shell();
 
     while(result != ExecResult::Exit)
-    {   
+    {
 
         const char * input = UI::get_input(UI::build_prompt(UI::get_full_path()).c_str()); // do not touch this line becuase i do not get how is function
 

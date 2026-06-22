@@ -87,3 +87,38 @@ ExecResult builtin_source(const std::vector<std::string> & argv)
     AliasManager::reload_aliases(argv[1]);
     return ExecResult::Continue;
 }
+
+ExecResult builtin_bg(std::list<JobData>::iterator job)
+{
+    if(job->state == JobState::STOPPED)
+    {
+        pid_t pgid = job->processes[0].pgid;
+
+        kill(-pgid, SIGCONT);
+    }
+
+    job->state = JobState::RUNNING;
+    job->mode = JobMode::BACKGRROUND;
+
+    rl_on_new_line();
+
+    std::cout << "[" << job->id << "]+ continued\t";
+
+    for (const auto &command : job->commands)
+    {
+        for (const auto &arg : command.argv)
+        {
+            std::cout << arg << " ";
+        }
+    }
+
+    std::cout << std::endl;
+
+    return ExecResult::Continue;
+}
+
+ExecResult builtin_fg(std::list<JobData>::iterator job)
+{
+
+    return ExecResult::Continue;
+}
