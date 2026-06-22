@@ -119,6 +119,33 @@ ExecResult builtin_bg(std::list<JobData>::iterator job)
 
 ExecResult builtin_fg(std::list<JobData>::iterator job)
 {
+    sigset_t mask, oldmask;
+    sigemptyset(&mask);
+    sigaddset(&mask, SIGCHLD);
+
+    sigprocmask(SIG_BLOCK, &mask, &oldmask); // block sigchld
+
+    sigdelset(&oldmask, SIGCHLD);
+
+    Executor exec;
+    ShellContext shell;
+    pid_t pgid = job->processes[0].pgid;
+
+    if(job->state == JobState::STOPPED)
+    {
+        kill(-pgid, SIGCONT);
+    }
+
+    job->state = JobState::RUNNING;
+    job->mode = JobMode::FOREGROUND;
+
+    tcsetpgrp(STDIN_FILENO, pgid);
+
+    exec.wait_job(job, oldmask);
+
+    tcsetpgrp(STDIN_FILENO, shell.shell_pid);
+
+    sigprocmask(SIG_SETMASK, &oldmask, nullptr); // unblock
 
     return ExecResult::Continue;
 }

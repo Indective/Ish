@@ -66,11 +66,6 @@ void Executor::restore_signal_handling()
 
 ExecResult Executor::wait_job(std::list<JobData>::iterator &job_it, const sigset_t &oldmask)
 {
-    std::cerr << "SHELL PGID: " << getpgrp()
-            << " FG: " << tcgetpgrp(STDIN_FILENO)
-            << std::endl;
-
-
     ExecResult res = ExecResult::Continue;
     
     while(!JobControl::is_stopped(*job_it) && !JobControl::is_done(*job_it))
@@ -93,11 +88,7 @@ ExecResult Executor::wait_job(std::list<JobData>::iterator &job_it, const sigset
         res = ExecResult::Failed;
     }
 
-    write(STDERR_FILENO, "[BEFORE HANDLE_DONE_JOBS]\n", 26);
-
     JobControl::handle_done_jobs();
-
-    write(STDERR_FILENO, "[AFTER HANDLE_DONE_JOBS]\n", 25);
 
     return res;
 }
@@ -195,6 +186,7 @@ ExecResult Executor::execute_pipe(const Pipeline& p, const bool& is_background)
     sigaddset(&mask, SIGCHLD);
 
     sigprocmask(SIG_BLOCK, &mask, &oldmask);
+    sigdelset(&oldmask, SIGCHLD);
 
     pid_t pgid = 0;
     ShellContext shell;
@@ -314,6 +306,8 @@ ExecResult Executor::execute_pipe(const Pipeline& p, const bool& is_background)
             }
          
             // Print job data 
+            rl_on_new_line();
+
             std::cout << "[" << JobControl::job_counter << "]";
 
             for(auto& process : processes)
@@ -323,6 +317,8 @@ ExecResult Executor::execute_pipe(const Pipeline& p, const bool& is_background)
 
             std::cout << std::endl;
 
+            sigprocmask(SIG_SETMASK, &oldmask, nullptr); // unblock
+
             return result;
         }
         else
@@ -331,27 +327,23 @@ ExecResult Executor::execute_pipe(const Pipeline& p, const bool& is_background)
 
             auto job_it = JobControl::jobs.emplace(JobControl::jobs.end(), job);
 
-            // assign all pids to the same job iterator
             for(auto &process : processes)
             {
                 JobControl::pid_to_job[process.pid] = job_it;
             }
 
-            // give control to terminal foreground group
             tcsetpgrp(STDIN_FILENO, pgid);
 
             ExecResult result = wait_job(job_it, oldmask);
 
-            // hand control back to shell
             tcsetpgrp(STDIN_FILENO, shell.shell_pid);
+
+            sigprocmask(SIG_SETMASK, &oldmask, nullptr); // unblock
             
             return result;
         }
     }
 }
-
-
-
 
 ExecResult Executor::execute_external_command(const Command& command, const bool& is_background)
 {
@@ -420,23 +412,15 @@ ExecResult Executor::execute_external_command(const Command& command, const bool
 
             JobControl::pid_to_job[pid] = job_it;
 
-            tcsetpgrp(STDIN_FILENO, pid); // give terminal
+            tcsetpgrp(STDIN_FILENO, pid);
 
             setpgid(pid, pid);
 
             result = wait_job(job_it, oldmask);
 
-            tcsetpgrp(STDIN_FILENO, getpgrp()); // take terminal
+            tcsetpgrp(STDIN_FILENO, getpgrp());
 
             sigprocmask(SIG_SETMASK, &oldmask, nullptr); // unblock
-
-            /*sigset_t unblock_mask;
-
-            sigemptyset(&unblock_mask);
-            sigaddset(&unblock_mask, SIGCHLD);
-            
-            sigprocmask(SIG_UNBLOCK, &unblock_mask, nullptr);
-            */ 
 
             return result;
         }

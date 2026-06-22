@@ -18,8 +18,9 @@ private :
     ExecResult execute_chain(const AndChain &chain, const bool &is_background);
     void close_pipes(std::vector<std::array<int, 2>> &pipes);
     void restore_signal_handling();
-    ExecResult wait_job(std::list<JobData>::iterator &job_it, const sigset_t &oldmask);
+    
 public : 
+    ExecResult wait_job(std::list<JobData>::iterator &job_it, const sigset_t &oldmask);
     
     ExecResult execute_job(const Job &job);
 };
